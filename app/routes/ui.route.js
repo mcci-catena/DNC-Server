@@ -6,4 +6,5 @@ module.exports = (app) => {
     app.post('/asignup', uictrl.asignup);
     app.post('/usignup', uictrl.usignup);
     app.post('/samail', uictrl.sendAmail);
+    app.post('/send-admin-otp',uictrl.sendAdminOtp);
 }

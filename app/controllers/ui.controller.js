@@ -1,4 +1,6 @@
+const Clients = require('../models/client.model.js');
 const Config = require('../models/config.model.js');
+const otplogs = require('../models/otplog.model.js');
 const Users = require('../models/user.model.js');
 
 const validfn = require('../misc/validators.js');
@@ -190,6 +192,86 @@ exports.asignup = (req, res) => {
 }
 
 
+// Send OTP to mail id
+exports.sendAdminOtp = (req, res) => {
+    // check req.body has required fields
+    if(!req.body.email) {
+        return res.status(400).send({
+            message: "Email ID required to send OTP"
+        });
+    }
+
+    if(!req.body.uname) {
+        return res.status(400).send({
+            message: "Username required to send OTP"
+        });
+    }
+
+    // email id validation
+    let emailId = req.body.email;
+    const [resb, rest] = validfn.emailvalidation(req.body.email)
+
+    if(!Boolean(resb))
+    {
+        return res.status(400).send({message: "Email "+rest}); 
+    }
+
+    // username validation required
+    let userName = req.body.uname;
+
+    // check admin status
+    Config.find({ "email": { $eq: emailId } })
+    .then(function(data){
+        if(data[0].status == "0"){
+            // check config collection doc count
+            // if more than one, check username is available
+            Config.estimatedDocumentCount()
+                .then(function(data) {
+                    if(data > 1){
+                        Users.countDocuments({ "uname": userName })
+                            .then(function(data){
+                                if(data >= 1){
+                                    return res.status(400).send({message: "Username not available"});
+                                }
+                                else{
+                                    saveOtpInfo(req, res);
+                                }
+                            })
+                            .catch((err) => {
+                                return res.status(500).send({
+                                    message: err.message || "Some error occurred while reading the user."
+                                });
+                            });
+                    }
+                    else{
+                        saveOtpInfo(req, res);
+                    }
+                })
+                .catch((err) => {
+                    return res.status(500).send({
+                        message: err.message || "Some error occurred while reading the Config."
+                    });
+                });
+        }
+        else if(data[0].status == "2"){
+            return res.status(400).send({message: "Admin account already configured"});
+        }
+        else if(data[0].status == "1"){
+            return res.status(400).send({message: "Admin signup already done"});
+        }
+        else{
+            return res.status(400).send({message: "Invalid admin account status"});
+        }
+    })
+    .catch((err) => {
+        return res.status(500).send({
+            message: err.message || "Some error occurred while reading the Config."
+        });
+    });
+
+};
+
+
 exports.sendAmail = (req, res) => {
     if(!req.body.email) {
         return res.status(400).send({
@@ -233,4 +315,82 @@ function CreateUserAccount(clientid, level, req, res)
 
 exports.usignup = (req, res) => {
     res.status(200).send({message: "Sorry, not implemented"})    
+}
+
+
+function saveOtpInfo(req, res){
+    const otpNum = GenerateRandom();
+    var currentDate = new Date();
+    currentDate.setMinutes(currentDate.getMinutes() + 30);
+
+    const otplog = new otplogs({
+        uname: req.body.uname,
+        email: req.body.email,
+        otp: otpNum,
+        isVerified: "no",
+        expiryTime: currentDate
+    });
+
+    otplog.save()
+    .then(data => {
+        sendMail = sendOtpMail(req.body.email, otpNum, req, res);
+        console.log("Mail Sent Status: " + sendMail);
+        if(sendMail){
+            return res.status(200).send({message: "OTP sent successfully!"}); 
+        }
+        else {
+            return res.status(400).send({message: "OTP sending failed!"});
+        }
+    })
+    .catch((err) => {
+        return res.status(500).send({
+            message: err.message || "Some error occurred while otp processing."
+        });
+    }
+    );
+}
+
+
+function GenerateRandom()
+{
+   var a = Math.floor((Math.random() * 999999) + 99999);
+   a = String(a);
+   return a = a.substring(0, 6);
+}
+
+
+function sendOtpMail(emailId, otpNum, req, res)
+{
+    var transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: 'srinimcci@gmail.com',
+            pass: 'Srini@Mcci21'
+        }
+    });
+
+    var mailOptions = {
+        from: 'srinimcci@gmail.com',
+        //to: 'seenivasanv@mcci.com',
+        to: emailId,
+        subject: 'Test mail from Node.js',
+        text: 'Your OTP for DNC login is '+ otpNum
+    };
+    
+    try{
+        transporter.sendMail(mailOptions, function(error, info){
+            if (error) {
+                console.log(error);
+                return res.status(400).send({message: "OTP sending failed!"});
+            } else {
+                console.log('Email sent: ' + info.response);
+                // return res.status(200).send({message: "OTP sent successfully!"});
+            }
+        });
+    }
+    catch(err){
+        return res.status(400).send({message: "OTP sending failed! \n" + err});
+    }    
+
+    return true;
 }
