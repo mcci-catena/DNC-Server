@@ -25,7 +25,7 @@
 const mongoose = require('mongoose');
 
 const NoteSchema = mongoose.Schema({
-    client: String,
+    cid: String,
     hwid: String,
     deviceid: String,
     devID: String,

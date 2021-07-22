@@ -24,19 +24,39 @@
 
 const Clients = require('../models/client.model.js');
 const Devices = require('../models/devreg.model.js');
-const DevSchema = require('../models/device.model.js');
 const validfn = require('../misc/validators.js');
+//const devmodel = require('../controllers/device.controller.js')
 
 const mongoose = require('mongoose');
 
 // Add a new device to the Database 
+
+getDevSchema = (client) => {
+    mschema = {} 
+    mschema["latitude"] = {"type": "String"}
+    mschema["longitude"] = {"type": "String"}
+    mschema["hwid"] = {"type": "String"}        // previously devEUI, in WeRadiate devid
+            
+    var taglist = client.taglist
+    for(i=0; i<taglist.length; i++)
+    {
+        mschema[taglist[i]] = {"type": "String"}
+    }
+            
+    mschema["idate"] = {"type": "Date"}
+    mschema["rdate"] = {"type": "Date"}
+
+    const devSchema = mongoose.Schema(mschema, {timestamps: true})
+    return devSchema
+}
+
 
 exports.mcreate = (req, res) => {
 
     if(!req.body.client || !req.body.hwid || (!req.body.deviceid && 
         !req.body.devID && !req.body.devEUI ) || !req.body.mmname ||
         !req.body.fdname || !req.body.datetime) {
-
+ 
         return res.status(400).send({
             message: "mandatory field missing"
         });
@@ -75,6 +95,8 @@ exports.mcreate = (req, res) => {
     .then(function(data) {
         if(data)
         {
+            req.body.cid = data.cid
+
             filtlist = []
             filtlist.push({"hwid": req.body.hwid, "rdate": ''})
             if(req.body.deviceid)
@@ -156,7 +178,7 @@ function addDevice(req, res)
         devEUI = ""
     }
     const device = new Devices({
-        client: req.body.client,
+        cid: req.body.cid,
         hwid: req.body.hwid,
         deviceid: deviceid,
         devID: devID,
@@ -169,7 +191,7 @@ function addDevice(req, res)
     device.save()
     .then(data => {
         var resdict = {};
-        resdict["client"] = data.client;
+        resdict["client"] = data.cid;
         resdict["Hw ID"] = data.hwid;
         resdict["Deviceid"] = data.deviceid;
         resdict["Dev ID"] = data.devID;
@@ -198,16 +220,41 @@ exports.adeviceList = (req, res) => {
             for(var i=0; i<data.length; i++)
             {
                 var dict = {};
-                dict['client'] = data[i].client;
+                dict['client'] = data[i].cid;
                 dict['hwid'] = data[i].hwid;
                 dict['deviceid'] = data[i].deviceid;
                 dict['devID'] = data[i].devID;
                 dict['devEUI'] = data[i].devEUI;
+                dict['mmname'] = data[i].mmname;
+                dict['fdname'] = data[i].fdname;
                 dict['idate'] = data[i].idate;
                 dict['rdate'] = data[i].rdate;
                 finlist.push(dict);
             }
-            res.status(200).send(finlist);
+
+            Clients.find()
+            .then(data => {
+                cids = []
+                cnames = []
+                for(var i=0; i<data.length; i++)
+                {
+                    cids.push(data[i].cid)
+                    cnames.push(data[i].cname)
+                }
+
+                for(var i=0; i<finlist.length; i++)
+                {
+                    if(cids.indexOf(finlist[i]['client']) >= 0)
+                    {
+                        finlist[i]['client'] = cnames[cids.indexOf(finlist[i]['client'])]
+                    }
+                }
+                res.status(200).send(finlist);
+            }).catch(err => {
+                res.status(500).send({
+                    message: err.message || "Some error occurred while retrieving Client info."
+                });
+            });
         }
         else
         {
@@ -234,7 +281,8 @@ exports.adeviceClient = (req, res) => {
     .then(function(data) {
         if(data)
         {
-            Devices.find({"client": req.params.client})
+            var cname = data.cname
+            Devices.find({"cid": data.cid})
             .then(function(data) {
                 if(data)
                 {
@@ -243,11 +291,14 @@ exports.adeviceClient = (req, res) => {
                     for(var i=0; i<data.length; i++)
                     {
                         var dict = {};
-                        dict['client'] = data[i].client;
+                        //dict['client'] = data[i].cid;
+                        dict['client'] = cname
                         dict['hwid'] = data[i].hwid;
                         dict['deviceid'] = data[i].deviceid;
                         dict['devID'] = data[i].devID;
                         dict['devEUI'] = data[i].devEUI;
+                        dict['mmname'] = data[i].mmname;
+                        dict['fdname'] = data[i].fdname;
                         dict['idate'] = data[i].idate;
                         dict['rdate'] = data[i].rdate;
                         finlist.push(dict);
@@ -280,9 +331,63 @@ exports.adeviceClient = (req, res) => {
     });
 }
 
+/*
+exports.mfdeviceList = (req, res) => {
+    if(!req.params.client) {
+        return res.status(400).send({
+            message: "mandatory field missing"
+        });
+    }
+
+    var clientname = {"cname" : req.params.client};
+    Clients.findOne(clientname)
+    .then(function(data) {
+        if(data)
+        {
+            var clientid = data.cid;            
+
+            var Cdev = mongoose.model('devices'+clientid, getDevSchema(data));
+
+            var filter = {"rdate": ''};
+            Cdev.find(filter)
+            .then(function(ndata) {
+                if(ndata)
+                {
+                    console.log(typeof ndata)
+                    console.log(typeof ndata[0])
+                    console.log(typeof ndata[0].hwid)
+                    console.log(typeof ndata[0].hwid)
+                }
+                else
+                {
+                    res.status(400).send({
+                        message: "No Devices under this Client!"
+                    });
+                }
+            })
+            .catch((err) => {
+                res.status(500).send({
+                    message: err.message || "Error occurred while fetching the Device info"
+                });
+            });
+        }
+        else
+        {
+            res.status(400).send({
+                message: "Client doesn't exists"
+            });
+        }
+    })
+    .catch((err) => {
+        res.status(500).send({
+            message: err.message || "Error occurred while fetching the client info"
+        });
+    });
+
+}  */
 
 // List the deviceID assigned under a deviceName for a Client
-exports.mdeviceList = (req, res) => {
+exports.mfdeviceList = (req, res) => {
     if(!req.params.client) {
         return res.status(400).send({
             message: "mandatory field missing"
@@ -295,46 +400,63 @@ exports.mdeviceList = (req, res) => {
         if(data)
         {
             var clientid = data.cid;
-            Devices.find({"client": req.params.client, "rdate": ''})
+
+            let Cdev
+            try {
+                Cdev = mongoose.model('devices'+clientid)
+            }catch (error){
+                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
+            }
+
+            Devices.find({"cid": clientid, "rdate": ''})
             .then(function(data) {
                 if(data)
                 {
                     if(data.length > 0)
                     {
-                        var hwids = []
-                        var devtags = []
-                        var devnwids = []
+                        var nhwids = []
+                        var deviceids = []
+                        var devIDs = []
+                        var devEUIs = []
                         var dtime = []
 
                         for(var i=0; i<data.length; i++)
                         {
-                            hwids.push(data[i].hwid)
-                            devtags.push(data[i].devtag)
-                            devnwids.push(data[i].devid)
+                            nhwids.push(data[i].hwid)
+                            deviceids.push(data[i].deviceid)
+                            devIDs.push(data[i].devID)
+                            devEUIs.push(data[i].devEUI)
                             dtime.push(data[i].idate)
                         }
                         
-                        var Cdev = mongoose.model('device'+clientid, DevSchema);
                         var filter = {"rdate": ''};
                         Cdev.find(filter)
-                        .then(function(data) {
-                            if(data)
+                        .then(function(ndata) {
+                            if(ndata)
                             {
                                 var devids = [];
                                 var avail = [];
                                 var results = {};
-                                for(var i=0; i<data.length; i++)
+                                for(var i=0; i<ndata.length; i++)
                                 {
-                                    devids.push(data[i].devid);
+                                    console.log(ndata[i]['hwid'])
+                                    devids.push(ndata[i].hwid);
                                 }
-                                for(var i=0; i<hwids.length; i++)
+                                
+                                for(var i=0; i<devids.length; i++)
                                 {
-                                    if(devids.indexOf(hwids[i]) == -1)
+                                    console.log("Data from Devices: ", devids[i])
+                                }
+                                
+                                for(var i=0; i<nhwids.length; i++)
+                                {
+                                    if(devids.indexOf(nhwids[i]) == -1)
                                     {
                                         var hwdict = {}
-                                        hwdict['hwid'] = hwids[i]
-                                        hwdict['devtag'] = devtags[i]
-                                        hwdict['devid'] = devnwids[i]
+                                        hwdict['hwid'] = nhwids[i]
+                                        hwdict['deviceid'] = deviceids[i]
+                                        hwdict['devID'] = devIDs[i]
+                                        hwdict['devEUI'] = devEUIs[i]
                                         hwdict['date'] = dtime[i]
                                         avail.push(hwdict)
                                     }
@@ -392,7 +514,7 @@ exports.mdeviceList = (req, res) => {
 exports.removemdevice = (devdict) => {
     return new Promise(function(resolve, reject) {
 
-        var filter = {"client": devdict.client, "hwid": devdict.hwid, "idate": devdict.idate}
+        var filter = {"cid": devdict.cid, "hwid": devdict.hwid, "rdate": ''}
         var update = {"rdate": new Date(devdict.rdate)};
         Devices.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true}, function(err, data){
             if(err)
@@ -413,6 +535,7 @@ exports.removemdevice = (devdict) => {
 exports.medit = (req, res) => {
     if(!req.params.client || !req.body.hwid || (!req.body.deviceid && 
        !req.body.devID && !req.body.devEUI && !req.body.nclient &&
+       !req.body.mmname && !req.body.fdname &&
        !req.body.nhwid) || !req.body.datetime) {
 
         return res.status(400).send({
@@ -422,7 +545,7 @@ exports.medit = (req, res) => {
 
     var clientname = {"cname" : req.params.client};
     Clients.findOne(clientname)
-    .then(function(data) {
+    .then(async function(data) {
         if(data)
         {
             var deviceid, devID, devEUI
@@ -453,22 +576,55 @@ exports.medit = (req, res) => {
                 devEUI = ""
             }
             
-            var filter = {"client": req.params.client, "hwid": req.body.hwid, 
+            var filter = {"cid": data.cid, "hwid": req.body.hwid, 
                           "rdate": ''}
-            var update = {"client": req.params.client, "hwid": req.body.hwid,
+            var update = {"cid": data.cid, "hwid": req.body.hwid,
                           "deviceid": deviceid, "devID": devID, "devEUI": devEUI,
+                          "mmname": req.body.mmname, "fdname": req.body.fdname,
                           "idate": new Date(req.body.datetime)};
             
+            var err_flg = false
+
             if(req.body.nclient)
             {
-                update.client = req.body.nclient
+                await Clients.findOne({"cname" : req.body.nclient})
+                .then(function(data) {
+                    if(data)
+                    {
+                        update.cid = data.cid
+                    }
+                    else{
+                        /*return res.status(400).send({
+                            message: "New Client doesn't exists"
+                        });*/
+                        //throw new Error('New Client doesnt exists');
+                        err_flg = true
+                        //console.log("Error True")
+                    }
+                })
+                .catch((err) => {
+                    res.status(500).send({
+                        message: err.message || "Error occurred while updating the device in record!"
+                    });
+                });
             }
             
+            if(err_flg == true)
+            {
+                //console.log("Going to throw")
+                throw new Error('New Client doesnt exists');
+            }
+            else
+            {
+                console.log("No Error")
+            }
+
+
             if(req.body.nhwid)
             {
                 update.hwid = req.body.nhwid
             }
-                    
+
             Devices.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
             .then(function(data) {
                 if(data)
@@ -477,15 +633,15 @@ exports.medit = (req, res) => {
                 }
                 else
                 {
-                    return res.status(400).send({
+                    res.status(400).send({
                         message: "Selected device not found in the record!"
                     });
                 }  
             })
             .catch((err) => {
-                    res.status(500).send({
-                        message: err.message || "Error occurred while updating the device in record!"
-                    });
+                res.status(500).send({
+                    message: err.message || "Error occurred while updating the device in record!"
+                });
             });
         }
         else
@@ -517,11 +673,13 @@ exports.mdelete = (req, res) => {
     .then(function(data) {
         if(data)
         {
-            Devices.findOneAndDelete({"client": req.params.client, "hwid": req.body.hwid, 
+            var cname = data.cname
+            Devices.findOneAndDelete({"cid": data.cid, "hwid": req.body.hwid, 
                             "rdate": ''})
             .then(function(data) {
                 if(data)
                 {
+                    data["client"] = cname;
                     res.status(200).send(data);
                 }
                 else

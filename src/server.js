@@ -1,9 +1,10 @@
 const cors = require('cors');
 const express = require('express');
-const dbConfig = require('./config/dbconfig.js');
 const mongoose = require('mongoose');
-
 const bodyParser = require('body-parser');
+
+const dbConfig = require('./config/dbconfig.js');
+const constants = require('./app/misc/constants');
 
 const app = express();
 
@@ -18,7 +19,7 @@ require('./app/routes/dnc.route.js')(app);
 require('./app/routes/ui.route.js')(app);
 require('./app/routes/devreg.route.js')(app);
 
-require('./app/version.js')(app);
+require('./app/about.js')(app);
 
 
 global.reqCnt = 0;
@@ -35,9 +36,9 @@ mongoose.connect(dbConfig.url, {
 });
 
 
-var server = app.listen(8893, function () {
+var server = app.listen(constants.APP_PORT, function () {
   var host = server.address().address
   var port = server.address().port
-  console.log("MCCI Generic DNC Server-API Listening http://%s:%s", host, port)
+  console.log(constants.APP_NAME, constants.APP_VERSION, " Listening http://%s:%s", host, port)
 });
 

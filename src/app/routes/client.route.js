@@ -7,7 +7,7 @@ module.exports = (app) => {
     app.post('/client', clientctrl.create);
 
     // Retrieve all clients
-    //app.get('/client', clientctrl.findAll);
+    app.get('/client', clientctrl.findAll);
 
     // Retrieve a single Client with clientId
     //app.get('/client/:clientId', clientctrl.findOne);

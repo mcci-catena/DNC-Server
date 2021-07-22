@@ -133,18 +133,17 @@ exports.findOne = (req, res) => {
 
 
 
-// Retrieve and return all users from the database.
-exports.findAll = () => {
-     Client.find()
-    .then(data => {
-        //console.log(data)
-        return data;
-    }).catch(err => {
-        console.log("Client Error")
-        return "error"
-    });
+// Retrieve and return all Clients.
+exports.findAll = (req, res) => {
+    Client.find()
+   .then(data => {
+       res.status(200).send(data);
+   }).catch(err => {
+       res.status(500).send({
+           message: err.message || "Some error occurred while retrieving clients."
+       });
+   });
 };
-
 
 
 // Funtion Name : getOne
@@ -181,7 +180,7 @@ exports.getOne = (cname) => {
 // Input Parameter : None
 // Output : [['countryName1', 'countryID1'], ['countryName2', 'countryID2']]
 
-
+/*
 exports.findAll = () => {
     return new Promise(function(resolve, reject) {
         Client.find()
@@ -207,4 +206,4 @@ exports.findAll = () => {
 
     });
 
-};
+};  */
