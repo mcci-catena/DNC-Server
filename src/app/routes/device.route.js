@@ -19,10 +19,12 @@ module.exports = (app) => {
    
     // Remove a device from a location    
     // app.put('/rmdevice/:devName', tokenfn.authenticateJWT, devctrl.updateRemoveStatus);
-    app.put('/rmdev/:client', devctrl.removeDevice);
+    app.put('/rmdev/:cname', devctrl.removeDevice);
 
     // Replace a device of a location
     //app.post('/rpdevice/:devName', tokenfn.authenticateJWT, devctrl.deviceReplace);
+    app.post('/rpdev/:cname', devctrl.replaceDevice);
 
     //app.delete('/device/:devName', tokenfn.authenticateJWT, devctrl.delete);
+    app.delete('/device/:cname', devctrl.delete);
 }

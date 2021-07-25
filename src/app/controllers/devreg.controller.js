@@ -114,7 +114,7 @@ exports.mcreate = (req, res) => {
             
             //Devices.findOne({$or:[{"hwid": req.body.hwid, "rdate": ''}, {"deviceid": req.body.devid, "rdate": ''},
             //                ]})
-             Devices.findOne({$or: filtlist})
+            Devices.findOne({$or: filtlist})
             .then(function(data) {
                 if(!data)
                 {

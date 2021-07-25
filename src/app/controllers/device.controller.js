@@ -1,9 +1,7 @@
 const Clients = require('../models/client.model.js');
-
+const Devices = require('../models/devreg.model.js');
 const validfn = require('../misc/validators.js');
-
-const rdev = require('../controllers/devreg.controller.js');
-
+const regdev = require('../controllers/devreg.controller.js');
 const mongoose = require('mongoose');
 
 
@@ -89,7 +87,17 @@ exports.create = (req, res) => {
                 Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
             }
 
-            filtdict = {}
+            filtdev = {}
+            filtdev["hwid"] = req.body.id
+            filtdev["rdate"] = ''
+            Devices.findOne(filtdev)
+            .then(function(data){
+                if(data)
+                {
+                    var idate = data.idate
+                    if(idate > gdate)
+                    {
+                        filtdict = {}
             indict = {}
             indict["latitude"] = req.body.lat
             indict["longitude"] = req.body.long
@@ -179,6 +187,26 @@ exports.create = (req, res) => {
                     message: err.message || "Error occurred while fetching Device info"
                 });
             }); 
+                    }
+                    else
+                    {
+                        res.status(200).send({
+                            message: "Remove date should be recent to the "
+                        });
+                    }
+                }
+                else
+                {
+                    res.status(200).send({
+                        message: "Device not found in the record"
+                    });
+                }
+            })
+            .catch((err) => {
+                res.status(500).send({
+                    message: err.message || "Error occurred while fetching the client info"
+                });
+            });
         }
         else
         {
@@ -319,14 +347,14 @@ exports.removeDevice = (req, res) => {
     var filter = {};
     for(var i=0; i<klist.length; i++)
     {
-        if(klist[i] != 'datatime')
+        if(klist[i] != 'datetime')
         {
             filter[klist[i]] = req.body[klist[i]]
         }
     }
     filter["rdate"] = ''
     
-    //console.log("Filter: ", filter)
+    console.log("Filter: ", filter)
 
     var dttmstr = req.body.datetime.split(",")
     var dtstr = dttmstr[0].trim();
@@ -355,7 +383,7 @@ exports.removeDevice = (req, res) => {
         if(data)
         {
             var clientid = data.cid;
-            var clientname = data.cname
+            clientname = data.cname
             
             let Cdev
             try {
@@ -366,6 +394,9 @@ exports.removeDevice = (req, res) => {
 
             var update = {"rdate": new Date(req.body.datetime)};
 
+            console.log("Find One")
+            console.log(filter)
+
             Cdev.findOne(filter)
             .then(function(data) {
                 if(data)
@@ -374,6 +405,7 @@ exports.removeDevice = (req, res) => {
                     var rdate = new Date(req.body.datetime)   
                     if(rdate > idate)
                     {
+                        console.log("Find and Update")
                         Cdev.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
                         .then(async function(data){
                             if(data)
@@ -383,14 +415,17 @@ exports.removeDevice = (req, res) => {
                                 devdict.hwid = data.hwid
                                 devdict.idate = data.idate
                                 devdict.rdate = data.rdate
+                                console.log("Remove Device")
                                 stat = await regdev.removemdevice(devdict)
+                                console.log("Remove Device Done")
                                 if(stat)
                                 {
                                     res.status(200).send(data)
                                 }
                                 else
                                 {
-                                    res.status(201).send(data)
+                                    res.status(201).send({message: "Device removed in Client record but failed to remove in Admin record,"+
+                                                    "contact Admin to solve the issue and add the new device again"});
                                 }
                             }
                             else
@@ -402,7 +437,7 @@ exports.removeDevice = (req, res) => {
                         })
                         .catch(err => {
                             res.status(500).send({
-                                message: err.message || "Error occurred while updating device info."
+                                message: "Error occurred while updating device info."
                             });
                         });
                     }
@@ -415,13 +450,13 @@ exports.removeDevice = (req, res) => {
                 else
                 {
                     res.status(400).send({
-                        message: err.message || "Requested device not found in the record"
+                        message: "Requested device not found in the record"
                     });
                 }
             })
             .catch(err => {
                 res.status(500).send({
-                    message: err.message || "Error occurred while finding the device info."
+                    message: "Error occurred while finding the device info."
                 });
             });
 
@@ -436,54 +471,251 @@ exports.removeDevice = (req, res) => {
     })
     .catch((err) => {
         res.status(500).send({
-            message: err.message || "Error occurred while fetching the client info"
+            message: "Error occurred while fetching the client info"
         });
     });
-
 }
 
 
-
-// List all devices under a location
-exports.findAll = (req, res) => {
-    if(!req.body.client || !req.body.site || !req.body.pile || !req.body.location) {
+exports.replaceDevice = (req, res) => {
+    if(!req.params.cname || !req.body.hwid || !req.body.nhwid ||
+        !req.body.datetime) {
         return res.status(400).send({
             message: "mandatory field missing"
         });
     }
+
+    var klist = Object.keys(req.body)
     
-    var clientname = {"cname" : req.body.client};
+    var filter = {};
+    for(var i=0; i<klist.length; i++)
+    {
+        if(klist[i] != 'datetime' && klist[i] != 'nhwid')
+        {
+            filter[klist[i]] = req.body[klist[i]]
+        }
+    }
+    filter["rdate"] = ''
+    
+    var dttmstr = req.body.datetime.split(",")
+    var dtstr = dttmstr[0].trim();
+    var tmstr = dttmstr[1].trim();
+
+    if(!validfn.validatedate(dtstr) || !validfn.validatetime(tmstr))
+    {
+        return res.status(400).send({
+            message: "Invalid date and time!"
+        });
+    }
+
+    var gdate = new Date(req.body.datetime)
+    var cdate = new Date();
+    
+    if(cdate < gdate)
+    {
+        return res.status(400).send({message: 
+                "Remove date should not be recent to the"+ 
+                " current date" });
+    }
+
+    var clientname = {"cname" : req.params.cname};
     Clients.findOne(clientname)
     .then(function(data) {
         if(data)
         {
             var clientid = data.cid;
-            var Cdev = mongoose.model('device'+clientid, DevSchema);
-            var filter = {"site" : req.body.site, "pile" : req.body.pile, 
-                          "lname" : req.body.location};
-            Cdev.find(filter)
+            clientname = data.cname
+            var tags = data.taglist
+            
+            let Cdev
+            try {
+                Cdev = mongoose.model('devices'+clientid)
+            }catch (error){
+                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
+            }
+
+            var update = {"rdate": new Date(req.body.datetime)};
+
+            console.log("Find One")
+            console.log(filter)
+
+            Cdev.findOne(filter)
             .then(function(data) {
                 if(data)
                 {
-                    res.status(200).send(data);
+                    var idate = data.idate
+                    var rdate = new Date(req.body.datetime)
+
+                    if(rdate > idate)
+                    {
+                        var indict = {}
+                        for(var i=0; i<tags.length; i++)
+                        {
+                            indict[tags[i]] = data[tags[i]]
+                        }
+                        indict["latitude"] = data.latitude
+                        indict["longitude"] = data.longitude
+                        indict["idate"] = new Date(req.body.datetime)
+                        indict["rdate"] = ''
+                        indict["hwid"] = req.body.nhwid
+                    
+                                            
+                        nfilt = {}
+                        nfilt["hwid"] = req.body.nhwid
+                        nfilt["rdate"] = ''
+
+                        Cdev.findOne(nfilt)
+                        .then(function(data) {
+                            if(!data)
+                            {
+                                Cdev.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
+                                .then(async function(data){
+                                    if(data)
+                                    {
+                                        var devdict = {}
+                                        devdict.cid = clientid
+                                        devdict.hwid = data.hwid
+                                        devdict.idate = data.idate
+                                        devdict.rdate = data.rdate
+                                        console.log("Remove Device")
+                                        stat = await regdev.removemdevice(devdict)
+                                        console.log("Remove Device Done")
+                                        if(stat)
+                                        {
+                                            const ndev = new Cdev(indict)
+                                            ndev.save()
+                                            .then(data => {
+                                                res.send(data);
+                                            })
+                                            .catch(err => { 
+                                                res.status(500).send({
+                                                    message: err.message || "Error occurred while adding the Device."
+                                                });
+                                            });
+                                        }
+                                        else
+                                        {
+                                            res.status(201).send({message: "Device removed in Client record but failed to remove in Admin record,"+
+                                                    "contact Admin to solve the issue and add the new device again"});
+                                        }
+                                    }
+                                    else
+                                    {
+                                        return res.status(400).send({
+                                            message: "Device info not matched!"
+                                        });
+                                    } 
+                                })
+                                .catch(err => {
+                                    res.status(500).send({
+                                        message: "Error occurred while updating device info."
+                                    });
+                                });
+                            }
+                            else
+                            {
+                                res.status(400).send({message: "The replace"+ 
+                                " device is exists in record"});
+                            }
+                        })
+                        .catch(err => {
+                            res.status(500).send({
+                                message: "Error occurred while updating device info."
+                            });
+                        });
+                    }
+                    else
+                    {
+                        res.status(400).send({message: "Replace date should be"+ 
+                                " recent to the installation date"});
+                    }  
                 }
                 else
                 {
                     res.status(400).send({
-                        message: "No Devices under the site, pile and location!"
+                        message: "Requested device not found in the record"
                     });
                 }
             })
-            .catch((err) => {
+            .catch(err => {
                 res.status(500).send({
-                    message: err.message || "Error occurred while fetching the device info"
+                    message: "Error occurred while finding the device info."
                 });
+            });
+        }
+        else
+        {
+            res.status(400).send({
+                message: "Client not exists"
             });
         }
     })
     .catch((err) => {
         res.status(500).send({
-            message: err.message || "Error occurred while fetching the client info"
+            message: "Error occurred while fetching the client info"
         });
     });
 }
+
+
+// Delete a device with the specified site locatione in the request
+
+exports.delete = (req, res) => {
+    if(!req.params.cname || !req.body.hwid) {
+         return res.status(400).send({
+             message: "mandatory field missing"
+         });
+    }
+
+    var klist = Object.keys(req.body)
+    
+    var filter = {};
+    for(var i=0; i<klist.length; i++)
+    {
+        filter[klist[i]] = req.body[klist[i]]
+    }
+    
+    var clientname = {"cname" : req.params.cname};
+    Clients.findOne(clientname)
+    .then(function(data) {
+        if(data)
+        {
+            var clientid = data.cid
+            
+            let Cdev
+            
+            try {
+                Cdev = mongoose.model('devices'+clientid)
+            }catch (error){
+                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
+            }
+
+            Cdev.deleteMany(filter)
+            .then(function(data) {
+                if(!data)
+                {
+                    return res.status(400).send({
+                        message: "Device not found with the given details "
+                    });
+                }
+                res.send({message: "Device "+req.body.hwid+" deleted successfully!"});
+            })
+            .catch((err) => {
+                res.status(500).send({ 
+                    message: err.message || "Error occurred while fetching device details"
+                });
+            });
+        }
+        else
+        {
+            res.status(400).send({
+                message: "Client not exists"
+            });
+        }
+    })
+    .catch((err) => {
+        res.status(500).send({
+            message: err.message || "Error occurred while fetching the client."
+        });
+    });
+};
