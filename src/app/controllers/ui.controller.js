@@ -4,6 +4,9 @@ const Clients = require('../models/client.model.js');
 const otplogs = require('../models/otplog.model.js');
 const emotps = require('../models/emotp.model.js');
 
+const jwt = require('jsonwebtoken');
+const constants = require('../misc/constants');
+
 const validfn = require('../misc/validators.js');
 
 const mongoose = require('mongoose');
@@ -12,79 +15,236 @@ const e = require('express');
 var crypto = require('crypto'); 
 var nodemailer = require('nodemailer');
 
+/* Utility functions */
 
-// Update admin Email in config record
-exports.updtaemail = (req, res) => {
-    if(!req.body.aemail) {
-        return res.status(400).send({
-            message: "Email can not be empty"
+// Generate random number
+function generateRandom()
+{
+   var a = Math.floor((Math.random() * 999999) + 99999);
+   a = String(a);
+   return a = a.substring(0, 6);
+}
+
+// To send OTP mail
+function sendEmail(otpNum, req, res)
+{
+    var transporter = nodemailer.createTransport({
+        host: 'postfix1',
+        port: 25,
+		secure: false,
+    });
+
+    var mailOptions = {
+        from: 'no-reply@mcci.com',
+        to: req.body.email,
+        subject: 'Test mail from DNC Server',
+        text: 'Your OTP for DNC login is '+ otpNum
+    };
+    
+	try{
+		transporter.sendMail(mailOptions, function(err, data) {
+            if(err) {
+                console.log(err);
+            } else {
+                console.log('Email sent successfully');
+			}
         });
-    }
+		return true;
+	}
+	catch(err) {
+		return res.status(400).send({message: "Send OTP failed"}); 
+	}
+	
+}
 
-    const [resb, rest] = validfn.emailvalidation(req.body.aemail)
+// save admin user
+function addAdminUserInfo(clientId, req, res) {
+	this.salt = crypto.randomBytes(8).toString('hex')
+    this.hash = crypto.pbkdf2Sync(req.body.pwd, this.salt,1000, 64, `sha512`).toString(`hex`); 
+	
+	const user = new Users({
+        cid: clientId,
+        uname: req.body.uname,
+        psalt: this.salt,
+        phash: this.hash,
+        email: req.body.email,
+        level: "2",
+        obsolete: "no"
+    });
+	
+	const filter = {"email": req.body.email};
+	const update = {"status": "2"};
+	Config.findOneAndUpdate(filter, update, { new: true })
+	.then(data => {
+			// res.status(200).send("Admin signed up successfully");
+		user.save()
+        .then(data => {
+		     res.status(200).send("Admin signed up successfully");
+        })
+		.catch(err => {
+            res.status(500).send({
+                message: err.message || "Admin signup failed!"
+            });
+        });	
+	})
+	.catch(err => {
+			res.status(400).send("Admin signup failed");
+	});
+	
+}
 
-    if(!Boolean(resb))
-    {
-        return res.status(400).send({message: "Email "+rest}); 
-    }
+// save normal user
+function addUserInfo(clientId, req, res) {
+	this.salt = crypto.randomBytes(8).toString('hex')
+    this.hash = crypto.pbkdf2Sync(req.body.pwd, this.salt,1000, 64, `sha512`).toString(`hex`); 
+	
+	const user = new Users({
+        cid: clientId,
+        uname: req.body.uname,
+        psalt: this.salt,
+        phash: this.hash,
+        email: req.body.email,
+        level: "1",
+        obsolete: false
+    });
+	
+	
+	user.save()
+    .then(data => {
+		     res.status(200).send("User signed up successfully");
+        })
+    .catch(err => {
+            res.status(500).send({
+                message: err.message || "User signup failed!"
+            });
+        });	
+	
+}
 
-    Config.findOne()
-    .then(function(data) {
-        if(data)
-        {
-            if(data.status == "2")
+// Verify OTP message
+function verifyOtp(clientId, req, res) {
+	
+	emotps.find({"email": req.body.email})
+	.then(data => {
+		if(data.length > 0){
+			// res.status(200).send(data);
+			vFlag = 0;
+			for(i=0; i<data.length; i++) {
+				var dbsalt = data[i].otpsalt;
+                var dbhash = data[i].otphash;
+				var rHash = crypto.pbkdf2Sync(req.body.otpnum, dbsalt,100, 16, `sha512`).toString(`hex`);
+				
+				console.log(dbhash);
+				console.log(rHash);
+				
+				if(dbhash == rHash && data[i].functionMode == req.body.mode && data[i].status == "non-verified") {
+					vFlag = 1;
+				}
+			}
+			
+			if(vFlag == 1 && req.body.mode == "asignup") {
+				// return res.status(200).send({message: "OTP verified"});
+				// return true;
+				addAdminUserInfo(clientId, req, res);
+			}
+			else if(vFlag == 1 && req.body.mode == "usignup") {
+				// return res.status(200).send({message: "OTP verified"});
+				// return true;
+				addUserInfo(clientId, req, res);
+			}
+			else {
+				return res.status(400).send({message: "Invalid OTP"});
+				// return false;
+			}
+		}
+		else {
+			return res.status(400).send({
+				message: "Invalid OTP or OTP expired"
+			});
+		}
+	})
+	.catch(err => {
+		res.status(500).send({
+			message: "Some error occured when accessing DB"
+		});
+	});
+}
+
+// Get client id of the client
+function getClientId(req, res) {
+	var cname = req.body.cname;
+	
+	Clients.find({"cname": cname})
+	.then(data => {
+		if(data.length == 1) {
+			// res.status(200).send(data);
+			return data[0].cid;
+		}
+		else {
+			res.status(400).send({
+			message: "Invalid client name"
+		});
+		}
+	})
+	.catch(err => {
+		res.status(400).send({
+			message: "Some error occured when accessing DB"
+		});
+	});
+}
+
+// Verify admin user mail and status
+function checkAdminConfig(req, res) {
+	Config.findOne()
+	.then(data => {
+		if(data) {
+			if(data.status == "0")
             {
-                res.status(200).send({message: "Admin account already created"})
+                return res.status(400).send({message: "Admin email not configured"})
+            }
+			else if(data.status == "1" && data.email == req.body.email) {
+				return true;
+			}
+		    else if(data.status == "2") {
+				return res.status(400).send({message: "Admin email already configured"})
+			}
+			else {
+				return res.status(400).send({message: "Not admin user"})
+			}
+		}
+		else {
+			res.status(400).send({message: "Admin config not done"});
+		}
+	})
+	.catch(err => {
+		res.status(500).send({message: "Some error occured when accessing DB"});
+	});
+}
+
+// Token
+function sendToken(req,res,level)
+{
+    const user = req.body.uname;
+
+    jwt.sign({user}, constants.KEY_SECRET, {expiresIn: '1800s'}, (err, token) => {
+            if(token)
+            {
+                var resdict = {};
+                
+                resdict["token"] = token;
+				resdict["level"] = level;
+                res.status(200).send(resdict); 
             }
             else
             {
-                var update = {"email": req.body.aemail}
-                Config.findOneAndUpdate(update, {useFindAndModify: false, new: true})
-                .then(function(data){
-                    if(data)
-                    {
-                        res.status(200).send(data)
-                    }
-                    else
-                    {
-                        return res.status(400).send({
-                            message: "Record not found "
-                        });
-                    }   
-                })
-                .catch(err => {
-                    res.status(500).send({
-                        message: err.message || "Error occurred while updating admin email."
-                    });
-                });
+                res.status(400).send({message: "Token creation failed"});
             }
-            
-        }
-        else
-        {
-            cdict = {}
-            cdict["email"] = req.body.aemail
-            cdict["status"] = "1"
-            const config = new Config(cdict);
-            config.save()
-            .then(data => {
-                res.status(200).send(data);
-            }).catch(err => {
-                res.status(500).send({
-                    message: err.message || "Some error occurred while configuring admin email."
-                });
-            });   
-        }
-
-    }).catch(err => {
-        res.status(500).send({
-            message: err.message || "Some error occurred while reading the Config."
-        });
-    });  
+    });
 }
 
+/* API functions */
 
-// General signup request from UI
+// To get sign-up mode
 exports.signup = (req, res) => {
     Config.findOne()
     .then(function(data) {
@@ -123,249 +283,41 @@ exports.signup = (req, res) => {
 
 }
 
-
-// Admin user signup
-exports.asignup = (req, res) => {
-    // Check fields are not empty
-    if(!req.body.email || !req.body.oname || !req.body.uname || !req.body.pwd) {
+// To send OTP through mail
+exports.sendOtp = async(req, res) => {
+	if(!req.body.email || !req.body.uname) {
         return res.status(400).send({
-            message: "Field can not be empty"
+            message: "Email Id and Username are required"
         });
     }
-
-    // Check OTP field received for verification
-    if(!req.body.otp){
-        return res.status(400).send({
-            message: "OTP required to verify account"
-        });
-    }
-
-    var [resb, rest] = validfn.inputvalidation(req.body.oname)
-    
-    if(!Boolean(resb))
-    {
-        return res.status(400).send({message: "Organization Name"+rest});  
-    }
-
-    [resb, rest] = validfn.inputvalidation(req.body.uname)
-    
-    if(!Boolean(resb))
-    {
-        return res.status(400).send({message: "User Name"+rest}); 
-    }
-
-    [resb, rest] = validfn.pwdvalidation(req.body.pwd)
-    
-    if(!Boolean(resb))
-    {
-        return res.status(400).send({message: "Password"+rest}); 
-    }
-
-    [resb, rest] = validfn.emailvalidation(req.body.email)
-    
-    if(!Boolean(resb))
-    {
-        return res.status(400).send({message: "Email"+rest}); 
-    }
-
-
-    Config.findOne()
-    .then(function(data) {
-        if(data)
-        {
-            if(data.status == "2")
-            {
-                res.status(200).send({message: "Admin account already created"})
-            }
-            else
-            if(data.status != "1")
-            {
-                res.status(200).send({message: "Admin Email not configured"}) 
-            }
-            else
-            {
-                if(data.email != req.body.email)
-                {
-                    res.status(200).send({message: "Given Email not match with the configured email"}) 
-                }
-                else
-                {
-                    CreateUserAccount("0", "4", req, res)
-                }
-            }
-        }
-        else
-        {
-            res.status(200).send({message: "Database not configured"}) 
-        }
-
-    }).catch(err => {
-        res.status(500).send({
-            message: err.message || "Some error occurred while reading the Config."
-        });
-    });  
-}
-
-
-// General user signup
-/*exports.usignup = (req, res) => {
-    res.status(200).send({message: "Sorry, not implemented"})    
-} */
-
-// Create and Save a new User
-exports.usignup = (req, res) => {
-    if(!req.body.cname ||!req.body.uname || !req.body.pwd || 
-       !req.body.email){
-        return res.status(400).send({
-            message: "mandatory field missing"
-        });
-    }
-
-    var [resb, rest] = validfn.inputvalidation(req.body.uname)
+	
+	const [resb, rest] = validfn.emailvalidation(req.body.email)
 
     if(!Boolean(resb))
     {
-        return res.status(400).send({message: "User name "+rest}); 
+        return res.status(400).send({message: "Email " + rest}); 
     }
-
-    [resb, rest] = validfn.pwdvalidation(req.body.pwd)
-
-    if(!Boolean(resb))
-    {
-        return res.status(400).send({message: "Password "+rest}); 
-    }
-
-    [resb, rest] = validfn.emailvalidation(req.body.email)
-
-    if(!Boolean(resb))
-    {
-        return res.status(400).send({message: "Email ID "+rest}); 
-    }
-
-    const update = {"cname": req.body.cname, "uname": req.body.uname, "pwd": req.body.pwd, 
-                     "email": req.body.email }
-
-    var clientname = {"cname" : {$regex: new RegExp(req.body.cname, "ig")}};
-    Clients.findOne(clientname)
-    .then(function(data) {
-        if(data)
-        {
-            var clientid = data.cid
-            var filter = {"uname": {$regex: new RegExp(req.body.uname, "ig")}}
-            CheckForExistance(filter, res, "User name")
-            .then(function(data) { 
-                if(data == 0)
-                {
-                    var email = {"email": {$regex: new RegExp(req.body.email, "ig")}};
-                    CheckForExistance(email, res, "Email Id")
-                    .then(function(data) {
-                        if(data == 0)
-                        {
-                            CreateUserAccount(clientid,req,res);
-                        }
-                    });
-                       }     
-               });        
-        }
-        else
-        {
-            return res.status(400).send({
-                message: "Client id is not valid"
-            });
-        }
-    })
-    .catch((err) => {
-        console.log("Client Read Error", err)
-    })
-};
-
-
-exports.checkSendOtp = (req, res) => {
-    if(!req.body.email || !req.body.uname || !req.body.oname || !req.body.purpose) {
-        return res.status(400).send({
-            message: "Fields are required: EmailID, UserName, OrgName, Purpose"
-        });
-    }
-
-    // Check the Admin account statua
-    Config.find()
-    .then(async function(data){
-        if(data)
-        {
-            //res.status(200).send(data);
-            if(data[0].status == "0")
-            {
-                res.status(200).send({message: "Admin Email not configured"});
-            }
-            else
-            if(data[0].status == "1")
-            {
-                //Admin account not created, checking the given email match with the record;
-                if(data[0].email == req.body.email)
-                {
-                    //Admin Email matching OK, next generate and send OTP to that email
-                    const otpNum = GenerateRandom();
-                    await SendEmailOtp(req, otpNum, res)
-                    PushOtpInDb(req, otpNum, res)
-                    //res.status(200).send({message: "OTP Sent Successfully!"});
-                }
-                else
-                {
-                    res.status(200).send({message: "Email Not match with the record"});
-                }
-            }
-            else
-            {
-                // General User Signup
-                res.status(200).send({message: "Admin account OK"});
-            }
-        }
-        else
-        {
-            res.status(200).send({message: "Document not created"});
-        }
-    })
-    .catch((err) => {
-        return res.status(500).send({
-            message: err.message || "Error occurred while reading the Config."
-        });
-    });
-};
-
-
-
-async function SendEmailOtp(req, otpNum, res)
-{
-    try{
-        await SendEmail(req.body.email, otpNum)
-        return
-    }catch(err)
-    {
-        res.status(200).send({message: "OTP Sending failed!"});
-    }
-}
-
-
-function PushOtpInDb(req, otpNum, res)
-{
-    var currentDate = new Date();
-    currentDate.setMinutes(currentDate.getMinutes() + 30);
-    console.log("Current Date: ", currentDate)
-
-    this.salt = crypto.randomBytes(8).toString('hex')
-    this.hash = crypto.pbkdf2Sync(otpNum, this.salt,100, 16, `sha512`).toString(`hex`); 
+	
+	var currentDate = new Date();
+	
+	var otpNum = generateRandom();
+	var sOtp = String(otpNum);
+	this.salt = crypto.randomBytes(8).toString('hex')
+    this.hash = crypto.pbkdf2Sync(sOtp, this.salt,100, 16, `sha512`).toString(`hex`); 
 
     const emotp = new emotps({
         uname: req.body.uname,
         email: req.body.email,
         otpsalt: this.salt,
         otphash: this.hash,
-        function: "signup",
-        status: "0",
+        functionMode: req.body.mode,
+        status: "non-verified",
         tvalid: currentDate
     });
-
-    emotp.save()
+	
+	await sendEmail(otpNum, req, res);
+	
+	emotp.save()
     .then(data => {
         res.status(200).send({
             message: "OTP Sent Successfully!"
@@ -374,265 +326,313 @@ function PushOtpInDb(req, otpNum, res)
         res.status(500).send({
             message: err.message || "OTP Process failed!"
         });
-    });   
+    });
 }
 
-// Send OTP to mail id
-exports.sendOtpSiva = (req, res) => {
-    // check req.body has required fields
-    if(!req.body.email) {
+// Admin sign-up
+exports.asignup = async(req, res) => {
+	if(!req.body.cname || !req.body.uname || !req.body.pwd || !req.body.email || !req.body.otpnum) {
         return res.status(400).send({
-            message: "Required field not found: EmailID"
+            message: "Missed to fill mandatory field"
         });
     }
-
-    if(!req.body.uname) {
-        return res.status(400).send({
-            message: "Required field not found: User Name"
-        });
-    }
-
-    if(!req.body.purpose) {
-        return res.status(400).send({
-            message: "Required field not found: Purpose"
-        });
-    }
-
-    // email id validation
-    let emailId = req.body.email;
-    const [resb, rest] = validfn.emailvalidation(req.body.email)
+	
+	// email validation
+	const [resb, rest] = validfn.emailvalidation(req.body.email)
 
     if(!Boolean(resb))
     {
-        return res.status(400).send({message: "Email "+rest}); 
+        return res.status(400).send({message: "Email " + rest}); 
     }
-
-    // username validation required
-    let userName = req.body.uname;
-
-    // check admin status
-    Config.find({ "email": { $eq: emailId } })
-    .then(function(data){
-        if(data[0].status == "0"){
-            // check config collection doc count
-            // if more than one, check username is available
-            Config.estimatedDocumentCount()
-                .then(function(data) {
-                    if(data > 1){
-                        Users.countDocuments({ "uname": userName })
-                            .then(function(data){
-                                if(data >= 1){
-                                    return res.status(400).send({message: "Username not available"});
-                                }
-                                else{
-                                    saveOtpInfo(req, res);
-                                }
-                            })
-                            .catch((err) => {
-                                return res.status(500).send({
-                                    message: err.message || "Some error occurred while reading the user."
-                                });
-                            });
-                    }
-                    else{
-                        saveOtpInfo(req, res);
-                    }
-                })
-                .catch((err) => {
-                    return res.status(500).send({
-                        message: err.message || "Some error occurred while reading the Config."
-                    });
-                });
-        }
-        else if(data[0].status == "2"){
-            return res.status(400).send({message: "Admin account already configured"});
-        }
-        else if(data[0].status == "1"){
-            return res.status(400).send({message: "Admin signup already done"});
-        }
-        else{
-            return res.status(400).send({message: "Invalid admin account status"});
-        }
-    })
-    .catch((err) => {
-        return res.status(500).send({
-            message: err.message || "Some error occurred while reading the Config."
-        });
-    });
-
-};
-
-function CheckForExistance(reqFilter, res, dataId)
-{
-    return new Promise(function(resolve, reject) {
-
-       Users.countDocuments(reqFilter,function(err, count){
-       if(err)
-       {
-           reject(2);
-           return res.status(400).send({
-             message: "connection error!!!"
-           });
-       }
-       if(count > 0)
-       {
-           resolve(1)
-              return res.status(400).send({
-              message: ""+dataId+" already exists, try with another!!!"
-           });
-       }
-       else{
-           resolve(0);
-       }
-     });
-
-    });
+	
+	// status 0, 1, 2 check
+    // email verify in config	
+	// var result = await checkAdminConfig(req, res);
+    Config.findOne()
+	.then(data => {
+		if(data) {
+			if(data.status == "0")
+            {
+                return res.status(400).send({message: "Admin email not configured"})
+            }
+			else if(data.status == "1" && data.email == req.body.email) {
+				Clients.find({"cname": req.body.cname})
+	            .then(data => {
+		            if(data.length == 1) {
+			            var clientId = data[0].cid;
+						verifyOtp(clientId, req, res);
+		            }
+		            else {
+			            res.status(400).send({
+			                message: "Invalid client name"
+		                });
+		            }
+	            })
+	            .catch(err => {
+		            res.status(400).send({
+			            message: "Some error occured when accessing DB"
+		            });
+	            });
+			}
+		    else if(data.status == "2") {
+				return res.status(400).send({message: "Admin email already configured"})
+			}
+			else {
+				return res.status(400).send({message: "Not admin user"})
+			}
+		}
+		else {
+			res.status(400).send({message: "Admin config not done"});
+		}
+	})
+	.catch(err => {
+		res.status(500).send({message: "Some error occured when accessing DB"});
+	});
 }
 
-// Send OTP through Email
-exports.verifyAuth = (req, res) => {
-    if(!req.body.email ||!req.body.oauth ){
+// User sign-up
+exports.usignup = (req, res) => {
+	if(!req.body.cname || !req.body.uname || !req.body.pwd || !req.body.email || !req.body.otpnum) {
         return res.status(400).send({
-            message: "Email or Auth code missing"
+            message: "Missed to fill mandatory field"
         });
     }
+	
+	// email validation
+	const [resb, rest] = validfn.emailvalidation(req.body.email)
 
-    if(req.body.oauth == "173813")
+    if(!Boolean(resb))
     {
-        return res.status(200).send({message: "Auth Success"});  
+        return res.status(400).send({message: "Email " + rest}); 
     }
-    else{
-        return res.status(400).send({message: "Auth failed"}); 
-    }
-
+	
+	// email verify in user table
+	Users.find({ $or: [{"uname": req.body.uname}, {"email": req.body.email}]})
+	.then(data => {
+		if(data.length > 0) {
+			res.status(400).send({message: "User already exists"});
+		}
+		else {
+			Clients.find({"cname": req.body.cname})
+	        .then(data => {
+		        if(data.length == 1) {
+			        var clientId = data[0].cid;
+				    verifyOtp(clientId, req, res);
+		        }
+		        else {
+			        res.status(400).send({
+			                message: "Invalid client name"
+		                });
+		        }
+	        })
+	        .catch(err => {
+		            res.status(400).send({
+			            message: "Some error occured when accessing DB"
+		            });
+	        });
+		}
+	})
+	.catch(err => {
+		res.status(500).send({message: "Some error occured when accessing DB"});
+	});
 }
 
-exports.testApi = (req, res) => {
-    // Config.find({email: {$eq: req.body.email}})
-    // .then(function(data){
-    //     if(data[0].status == "0"){
-    //         return res.status(200).send({message: data}); 
-    //     }
-    //     else{
-    //         return res.status(400).send({message: "No data"}); 
-    //     }
-    // })
-    // .catch((err) => {
-    //     return res.status(400).send({message: "Error in DB operation"}); 
-    // });
-
-    // otplogs.find({email: req.body.email})
-    // .then(function(data){
-    //     return res.status(200).send({message: data}); 
-    // })
-    // .catch((err) => {
-    //     return res.status(400).send({message: "Error in DB operation" + err}); 
-    // })
-
-    const client = new Clients({
-        cname: "testclient2",
-        cid: "1113",
-        dbdata: {},
-        taglist: []
-    });
-
-    client.save()
-        .then(function(data){
-            console.log("Query Result: " + data);
-            return res.status(200).send({message: "Client data inserted.\n" + data});
-        })
-        .catch((err) => {
-            return res.status(400).send({message: "Error in DB operation" + err}); 
-        });
+// Update email
+exports.updateEmail = (req, res) => {
+	// email verify
+	
+	// uemail verify
+	
+	// otp verifyAuth
+	
+	// email & otp match
+	
+	// save info & otp "verified"
 }
 
-function saveOtpInfo(req, res){
-    const otpNum = GenerateRandom();
-    var currentDate = new Date();
-    currentDate.setMinutes(currentDate.getMinutes() + 30);
+// List user
+exports.listuser = (req, res) => {
+	Users.find({obsolete: {$eq: false}})
+	.then(data => {
+		if(data) {
+			res.status(200).send(data);
+		}
+		else {
+			res.status(400).send({message: "User not found"});
+		}
+	})
+	.catch(err => {
+		res.status(500).send({message: "Error accessing DB"});
+	});
+}
 
-    const otplog = new otplogs({
-        uname: req.body.uname,
-        email: req.body.email,
-        otp: otpNum,
-        isVerified: "no",
-        expiryTime: currentDate
-    });
+// Update user
+exports.updateuser = (req, res) => {
+    if(!req.params.uname || !req.body.email || 
+        (!req.body.pwd && !req.body.email_new)){
+         return res.status(400).send({
+             message: "mandatory field missing"
+         });
+    }
 
-    otplog.save()
+    const filter = {"uname": {$regex: new RegExp(req.params.uname, "ig")}, 
+                    "email": {$regex: new RegExp(req.body.email, "ig")}};
+    
+    var update = {};
+    if(req.body.pwd)
+    {
+        var [resb, rest] = validfn.pwdvalidation(req.body.pwd)
+        if(!Boolean(resb))
+        {
+            return res.status(400).send({message: "Password "+rest}); 
+        }        
+
+        this.salt = crypto.randomBytes(16).toString('hex');
+        this.hash = crypto.pbkdf2Sync(req.body.pwd, this.salt,1000, 64,
+                                      `sha512`).toString(`hex`); 
+        update["psalt"] = this.salt;
+        update["phash"] = this.hash;
+    }
+    if(req.body.email_new)
+    {
+        var [resb, rest] = validfn.emailvalidation(req.body.email_new)
+        if(!Boolean(resb))
+        {
+            return res.status(400).send({message: "Email ID "+rest}); 
+        }
+
+        update["email"] = req.body.email_new;
+    }
+    
+    Users.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
     .then(data => {
-        sendMail = sendOtpMail(req.body.email, otpNum, req, res);
-        console.log("Mail Sent Status: " + sendMail);
-        if(sendMail){
-            return res.status(200).send({message: "OTP sent successfully!"}); 
+        if(!data) {
+            return res.status(400).send({
+                message: req.params.uname+" not found with the email " +
+                req.body.email
+            });
         }
-        else {
-            return res.status(400).send({message: "OTP sending failed!"});
-        }
+		else {
+			res.status(200).send({message: "User "+req.params.uname+
+                             " updated successfully!"});
+		}
     })
-    .catch((err) => {
-        return res.status(500).send({
-            message: err.message || "Some error occurred while otp processing."
+    .catch(err => {
+        res.status(500).send({
+            message: err.message || "Some error occurred while retrieving users."
         });
-    }
-    );
+    });
 }
 
-function CreateUserAccount(clientid, level, req, res)
-{
-    this.salt = crypto.randomBytes(16).toString('hex')
-    this.hash = crypto.pbkdf2Sync(req.body.pwd, this.salt,1000, 64, `sha512`).toString(`hex`); 
-
-    //const update = {"uname": req.body.uname, "psalt": this.salt, "pwd": this.hash, "email": req.body.email}
-
-    const client = new Users({
-                      cid: clientid,
-                      uname: req.body.uname,
-                      psalt: this.salt,
-                      phash: this.hash,
-                      email: req.body.email,
-                      level: level
-                  });    
-
-    client.save()
+// Delete user
+exports.deleteuser = (req, res) => {
+    if(!req.body.email){
+        return res.status(400).send({
+            message: "mandatory field missing"
+        });
+    }
+    
+    const filter = {"uname": {$regex: new RegExp(req.params.uname, "ig")},
+		"email": {$regex: new RegExp(req.body.email, "ig")}};
+    const update = {"obsolete": true};
+	
+    Users.findOneAndUpdate(filter, update, { new: true })
     .then(data => {
-        var resdict = {};
-        resdict["uname"] = data.uname;
-        resdict["email"] = data.email;
-        res.status(200).send(resdict);
+        if(!data) {
+            return res.status(400).send({
+                message: "User not found with the email " +
+                req.body.email
+            });
+        }
+		else{
+		    res.status(200).send({message: "User "+ req.params.uname +" deleted successfully!"});	
+		}
     }).catch(err => {
         res.status(500).send({
-            message: err.message || "Some error occurred while creating the Account."
+            message: err.message || "Some error occurred while retrieving users."
         });
-    });      
-
-}
-
-
-function GenerateRandom()
-{
-   var a = Math.floor((Math.random() * 999999) + 99999);
-   a = String(a);
-   return a = a.substring(0, 6);
-}
-
-
-function SendEmail(emailId, otpNum)
-{
-    var transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: 'srinimcci@gmail.com',
-            pass: 'Srini@Mcci21'
-        }
     });
+};
 
-    var mailOptions = {
-        from: 'srinimcci@gmail.com',
-        //to: 'seenivasanv@mcci.com',
-        to: emailId,
-        subject: 'Test mail from Node.js',
-        text: 'Your OTP for DNC login is '+ otpNum
-    };
-    return transporter.sendMail(mailOptions)
+// Forgot password
+exports.forgotpwd = (req, res) => {
+	if(!req.body.email || !req.body.new_pwd || !req.body.otpnum){
+        return res.status(400).send({
+            message: "mandatory field missing"
+        });
+    }
+	
+	if(req.body.new_pwd)
+    {
+        var [resb, rest] = validfn.pwdvalidation(req.body.new_pwd)
+        if(!Boolean(resb))
+        {
+            return res.status(400).send({message: "Password "+rest}); 
+        }
+	}
+	
+	this.salt = crypto.randomBytes(8).toString('hex')
+    this.hash = crypto.pbkdf2Sync(req.body.new_pwd, this.salt,1000, 64, `sha512`).toString(`hex`); 
+	
+	const filter = {"email": {$regex: new RegExp(req.body.email, "ig")}};
+    const update = {"psalt": this.salt, "phash": this.hash};
+	
+	Users.findOneAndUpdate(filter, update, { new: true })
+    .then(data => {
+        if(!data) {
+            return res.status(400).send({
+                message: "Invalid email: " +
+                req.body.email
+            });
+        }
+		else{
+		    res.status(200).send({message: "Password updated successfully!"});	
+		}
+    }).catch(err => {
+        res.status(500).send({
+            message: err.message || "Some error occurred while updating password."
+        });
+    });
+}
+
+// Login
+exports.uiLogin = (req, res) => {
+	if(!req.body.uname || !req.body.pwd){
+        return res.status(400).send({
+            message: "mandatory field missing"
+        });
+    }
+	
+	var username = {"uname" : {$regex: new RegExp(req.body.uname, "ig")}};
+    var pwd = {"pwd" : req.body.pwd};
+	
+	Users.findOne(username)
+    .then(function(data) {
+		if(data && data.obsolete === false){
+			var dbsalt = data.psalt
+            var dbhash = data.phash
+            var level = data.level
+			
+			this.hash = crypto.pbkdf2Sync(req.body.pwd, dbsalt,1000, 64, `sha512`).toString(`hex`);
+			
+			if(this.hash == dbhash) {
+				sendToken(req, res, level);
+			}
+			else {
+				res.status(400).send({
+                    message: "Invalid password"
+                });
+			}
+		}
+		else{
+			res.status(400).send({
+                message: "User not exists"
+            });
+		}
+	})
+	.catch(err => {
+		res.status(500).send({
+            message: err.message || "Some error occurred while accessing DB."
+        });
+	});
 }
