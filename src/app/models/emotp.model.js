@@ -5,11 +5,13 @@ const NoteSchema = mongoose.Schema({
     email: String,
     otpsalt: String,
     otphash: String,
-    function: String,
+    functionMode: String,
     status: String,
     tvalid: Date
 }, {
     timestamps: true
 });
+
+NoteSchema.index( { "tvalid": 1 }, { expireAfterSeconds: 300 } );
 
 module.exports = mongoose.model('emotps', NoteSchema);
