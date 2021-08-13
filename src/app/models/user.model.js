@@ -6,7 +6,8 @@ const NoteSchema = mongoose.Schema({
     psalt: String,
     phash: String,
     email: String,
-    level: String
+    level: String,
+	obsolete: Boolean
 }, {
     timestamps: true
 });
