@@ -1,4 +1,5 @@
 const uictrl = require('../controllers/ui.controller.js');
+const tokenfn = require('../misc/auth.js');
 
 module.exports = (app) => {
     // General signup request from UI reach here
@@ -17,17 +18,26 @@ module.exports = (app) => {
     app.post('/send-otp', uictrl.sendOtp);
 	
 	// List user details
-	app.get('/list-user', uictrl.listuser);
+	app.get('/list-user', tokenfn.authenticateJWT, uictrl.listuser);
 	
 	// Update user details
 	app.put('/update-user/:uname', uictrl.updateuser);
 	
 	// Delete user details
-	app.delete('/delete-user/:uname', uictrl.deleteuser);
+	app.delete('/delete-user/:uname', tokenfn.authenticateJWT, uictrl.deleteuser);
 	
 	// Forgot password
-	app.put('/reset-pwd', uictrl.forgotpwd);
+	app.put('/update-pwd', uictrl.forgotpwd);
+	
+	// Send OTP through Email
+    app.post('/fp-send-otp', uictrl.fpSendOtp);
 	
 	// Login 
 	app.post('/login', uictrl.uiLogin);
+
+    // Authendicate User input
+    // app.post('/chkmoa', uictrl.verifyAuth);
+
+    // Test
+    // app.post('/test-api', uictrl.testApi)
 }

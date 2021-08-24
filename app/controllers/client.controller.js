@@ -1,16 +1,11 @@
 const Client = require('../models/client.model.js');
 const validfn = require('../misc/validators.js');
 const fetch = require('node-fetch');
+
 const mongoose = require('mongoose');
 const e = require('express');
 
-/****************************************************************************\
-|                                                                            |
-|    Utility functions                                                       |
-|                                                                            |
-\****************************************************************************/
-
-// To generate 4-digit random number
+// Utility functions
 function GenerateRandom()
 {
    var a = Math.floor((Math.random() * 9999) + 999);
@@ -18,48 +13,33 @@ function GenerateRandom()
    return a = a.substring(0, 4);
 }
 
-// To get list of collection names in DB
-async function getCollectionsList(req, res) {
-	const collections = await mongoose.connection.db.listCollections().toArray();
-	return collections;
-}
-
-// To check a client is already available in Client collection
 function CheckForClientExistance(reqFilter, res, dataId)
 {
     return new Promise(function(resolve, reject) {
 
-    //console.log(reqFilter);
-
-       Client.countDocuments(reqFilter,function(err, count){
-       if(err)
-       {
-           reject(2);
-           return res.status(400).send({
-             message: "connection error!!!"
-           });
-       }
-       if(count > 0)
-       {
-           resolve(1)
-              return res.status(400).send({
-              message: ""+dataId+" already exists, try with another!!!"
-           }); 
-       }
-       else{
-           resolve(0);
-       }
-     });
-
+        Client.countDocuments(reqFilter,function(err, count){
+            if(err)
+            {
+                reject(2);
+                return res.status(400).send({
+                    message: "connection error!!!"
+                });
+            }
+            if(count > 0)
+            {
+                resolve(1)
+                return res.status(400).send({
+                    message: ""+dataId+" already exists, try with another!!!"
+                }); 
+            }
+            else{
+                resolve(0);
+            }
+        });
     });
 }
 
-/****************************************************************************\
-|                                                                            |
-|    API functions                                                           |
-|                                                                            |
-\****************************************************************************/
-
+// API functions
 // Create and Save a new Client
 exports.create = (req, res) => {
     
@@ -128,15 +108,16 @@ exports.create = (req, res) => {
         }
     });
 };
+    
 
-// Find a single client document by client name
+// Find a single country by countryName
 exports.find_client = (req, res) => {
-    var filter = {"cname": req.params.clientName};
+    var filter = {"cname": req.params.clientId};
     Client.findOne(filter)
     .then(data => {
         if(!data) {
             return res.status(400).send({
-                message: "Client not found with name " + req.params.clientName
+                message: "Client not found with name " + req.params.clientId
             });            
         }
         else{
@@ -146,22 +127,23 @@ exports.find_client = (req, res) => {
     }).catch(err => {
         if(err.kind === 'ObjectId') {
             return res.status(400).send({
-                message: "Client not found with ID: " + req.params.clientName
+                message: "Client not found with ID: " + req.params.clientId
             });                
         }
         else{
             return res.status(500).send({
-                message: "Error retrieving note with id: " + req.params.clientName
+                message: "Error retrieving note with id: " + req.params.clientId
             });
         }
     });
 };
 
-// Retrieve and return all Clients
+
+// Retrieve and return all Clients.
 exports.find_clients = (req, res) => {
     Client.estimatedDocumentCount()
     .then(data => {
-        // console.log("Client collection row count: " + data);
+        console.log("Client collection row count: " + data);
         if(data > 0) {
             Client.find()
             .then(data => {
@@ -181,7 +163,7 @@ exports.find_clients = (req, res) => {
 };
 
 
-// Update a client info identified by client id
+// Update a user identified by the userId in the request
 exports.update = (req, res) => {
     if(!req.body.cname) {
         return res.status(400).send({
@@ -228,15 +210,13 @@ exports.update = (req, res) => {
                 message: "Client not found with ID " + req.params.clientId
             });                
         }
-        else {
-            return res.status(500).send({
-                message: "Error updating Client: " + req.params.clientId
-            });
-        }
+        return res.status(500).send({
+            message: "Error updating Client: " + req.params.clientId
+        });
     });
 };
 
-// Fetch DB names of requested influxdb URL
+
 exports.fetch_db_names = (req, res) => {
 	var influxUrl = req.body.url;
 	var influxUser = req.body.user;
@@ -277,7 +257,7 @@ exports.fetch_db_names = (req, res) => {
 	});
 }
 
-// To check whether any device assigned for a client
+
 exports.find_device_register_status = (req, res) => {
 	var clientDevice = "devices" + String(req.params.clientId);
 	
@@ -311,3 +291,9 @@ exports.find_device_register_status = (req, res) => {
             }); 
 	});
 };
+
+
+async function getCollectionsList(req, res) {
+	const collections = await mongoose.connection.db.listCollections().toArray();
+	return collections;
+}

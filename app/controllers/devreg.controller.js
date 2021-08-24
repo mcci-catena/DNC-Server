@@ -18,14 +18,13 @@
 #     Seenivasan V, MCCI Corporation Feb 2021
 #
 # Revision history:
-#     V1.1.2 Wed Feb 23 2021 11:24:35 seenivasan
+#     V1.0.0 Wed Aug 23 2021 11:24:35 seenivasan
 #       Module created
 ############################################################################*/
 
 const Clients = require('../models/client.model.js');
 const Devices = require('../models/devreg.model.js');
 const validfn = require('../misc/validators.js');
-//const devmodel = require('../controllers/device.controller.js')
 
 const mongoose = require('mongoose');
 
@@ -191,7 +190,7 @@ function addDevice(req, res)
     device.save()
     .then(data => {
         var resdict = {};
-        resdict["client"] = data.cid;
+        resdict["client"] = data.client;
         resdict["Hw ID"] = data.hwid;
         resdict["Deviceid"] = data.deviceid;
         resdict["Dev ID"] = data.devID;
@@ -331,60 +330,6 @@ exports.adeviceClient = (req, res) => {
     });
 }
 
-/*
-exports.mfdeviceList = (req, res) => {
-    if(!req.params.client) {
-        return res.status(400).send({
-            message: "mandatory field missing"
-        });
-    }
-
-    var clientname = {"cname" : req.params.client};
-    Clients.findOne(clientname)
-    .then(function(data) {
-        if(data)
-        {
-            var clientid = data.cid;            
-
-            var Cdev = mongoose.model('devices'+clientid, getDevSchema(data));
-
-            var filter = {"rdate": ''};
-            Cdev.find(filter)
-            .then(function(ndata) {
-                if(ndata)
-                {
-                    console.log(typeof ndata)
-                    console.log(typeof ndata[0])
-                    console.log(typeof ndata[0].hwid)
-                    console.log(typeof ndata[0].hwid)
-                }
-                else
-                {
-                    res.status(400).send({
-                        message: "No Devices under this Client!"
-                    });
-                }
-            })
-            .catch((err) => {
-                res.status(500).send({
-                    message: err.message || "Error occurred while fetching the Device info"
-                });
-            });
-        }
-        else
-        {
-            res.status(400).send({
-                message: "Client doesn't exists"
-            });
-        }
-    })
-    .catch((err) => {
-        res.status(500).send({
-            message: err.message || "Error occurred while fetching the client info"
-        });
-    });
-
-}  */
 
 // List the deviceID assigned under a deviceName for a Client
 exports.mfdeviceList = (req, res) => {
@@ -509,7 +454,7 @@ exports.mfdeviceList = (req, res) => {
             message: err.message || "Error occurred while fetching the client info"
         });
     });
-}
+} 
 
 exports.removemdevice = (devdict) => {
     return new Promise(function(resolve, reject) {
@@ -594,12 +539,7 @@ exports.medit = (req, res) => {
                         update.cid = data.cid
                     }
                     else{
-                        /*return res.status(400).send({
-                            message: "New Client doesn't exists"
-                        });*/
-                        //throw new Error('New Client doesnt exists');
                         err_flg = true
-                        //console.log("Error True")
                     }
                 })
                 .catch((err) => {
@@ -611,7 +551,6 @@ exports.medit = (req, res) => {
             
             if(err_flg == true)
             {
-                //console.log("Going to throw")
                 throw new Error('New Client doesnt exists');
             }
             else

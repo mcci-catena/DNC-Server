@@ -5,5 +5,6 @@ module.exports = (app) => {
     app.post('/tagsk', dncctrl.readtags);
     app.post('/tagsv', dncctrl.readtagval);
     app.post('/alogin', dncctrl.alogin);
+    app.post('/plogin', dncctrl.pluginLogin);
     app.post('/dlist', devctrl.getDeviceList);
 }

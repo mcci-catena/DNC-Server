@@ -20,15 +20,6 @@ getDevSchema = (client) => {
     mschema["idate"] = {"type": "Date"}
     mschema["rdate"] = {"type": "Date"}
 
-    /*let Cdev
-    try {
-        Cdev = mongoose.model('devices'+clientid)
-
-        }catch (error){
-        const devSchema = mongoose.Schema(mschema, {timestamps: true})
-        Cdev = mongoose.model('devices'+clientid, devSchema)
-    }*/
-
     const devSchema = mongoose.Schema(mschema, {timestamps: true})
     return devSchema
 }
@@ -43,13 +34,6 @@ exports.create = (req, res) => {
             message: "mandatory field missing"
         });
     }
-
-    /*var [resb, rest] = validfn.inputvalidation(req.body.id)
-
-    if(!Boolean(resb))
-    {
-        return res.status(400).send({message: "Device ID "+rest}); 
-    }*/
 
     var dttmstr = req.body.datetime.split(",")
     var dtstr = dttmstr[0].trim();
@@ -77,32 +61,35 @@ exports.create = (req, res) => {
     .then(function(data) {
         if(data)
         {
-            var clientid = data.cid;
+            mschema = {} 
+            mschema["latitude"] = {"type": "String"}
+            mschema["longitude"] = {"type": "String"}
             var taglist = data.taglist
-            
+            console.log("TagList: ", taglist, taglist.length)
+            for(i=0; i<taglist.length; i++)
+            {
+                mschema[taglist[i]] = {"type": "String"}
+            }
+            mschema["hwid"] = {"type": "String"}        // previously devEUI, in WeRadiate devid
+            mschema["idate"] = {"type": "String"}
+            mschema["rdate"] = {"type": "String"}
+
+            var clientid = data.cid;
+
             let Cdev
             try {
                 Cdev = mongoose.model('devices'+clientid)
+
             }catch (error){
-                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
+                const devSchema = mongoose.Schema(mschema, {timestamps: true})
+                Cdev = mongoose.model('devices'+clientid, devSchema)
             }
 
-            filtdev = {}
-            filtdev["hwid"] = req.body.id
-            filtdev["rdate"] = ''
-            Devices.findOne(filtdev)
-            .then(function(data){
-                if(data)
-                {
-                    var idate = data.idate
-                    if(idate > gdate)
-                    {
-                        filtdict = {}
+            filtdict = {}
             indict = {}
             indict["latitude"] = req.body.lat
             indict["longitude"] = req.body.long
-            indict["hwid"] = req.body.id                 // previously devEUI, in WeRadiate devid
-            
+           
             for(i=0; i<taglist.length; i++)
             {
                 indict[taglist[i]] = null
@@ -129,12 +116,14 @@ exports.create = (req, res) => {
                 }
             }
 
+            indict["hwid"] = req.body.id                  // previously devEUI, in WeRadiate devid
             indict["idate"] = req.body.datetime
             indict["rdate"] = ''
 
 
             console.log("Findict: ", indict)
 
+            //filtdict["devEUI"] = req.body.id
             filtdict["rdate"] = ''
 
             devfilt = {}
@@ -187,26 +176,6 @@ exports.create = (req, res) => {
                     message: err.message || "Error occurred while fetching Device info"
                 });
             }); 
-                    }
-                    else
-                    {
-                        res.status(200).send({
-                            message: "Remove date should be recent to the "
-                        });
-                    }
-                }
-                else
-                {
-                    res.status(200).send({
-                        message: "Device not found in the record"
-                    });
-                }
-            })
-            .catch((err) => {
-                res.status(500).send({
-                    message: err.message || "Error occurred while fetching the client info"
-                });
-            });
         }
         else
         {
@@ -221,7 +190,6 @@ exports.create = (req, res) => {
         });
     });
 }
-
 
 // List the all devices assigned for all clients
 exports.adevClient = (req, res) => {
@@ -332,15 +300,6 @@ exports.removeDevice = (req, res) => {
         });
     }
 
-    /*console.log("Keys Length: ", Object.keys(req.body).length)
-    var klen = Object.keys(req.body).length
-    console.log("Key: ", Object.keys(req.body))
-
-    for(var i=0; i<klen; i++)
-    {
-        console.log("Key: ", Object.keys(req.body)[i])
-    } */
-     
     var klist = Object.keys(req.body)
     console.log("Keys: ", klist)
 

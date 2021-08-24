@@ -10,12 +10,15 @@ exports.getDeviceList = (req, res) => {
     //var cfilter = {"dbdata.user": req.body.dncd.influxd.uname, "dbdata.pwd": req.body.dncd.influxd.pwd, "dbdata.dbname": req.body.dncd.influxd.dbname}
     var cfilter = {"cname": req.body.dncd.influxd.uname}
 
+    //console.log("Device List: ", req.body.dncd.influxd)
+
     Client.findOne(cfilter)
     .then(function(data){
         if(data)
         {
             Cdev = dschema.getDevSchema(data)
             clientname = data.cname
+            clientid = data.cid
 
             fmdate = req.body.dncd.fdate
             todate = req.body.dncd.tdate
@@ -35,13 +38,17 @@ exports.getDeviceList = (req, res) => {
             
             taglist = data.taglist
 
+            //console.log("Filter: ", filter)
+
             Cdev.find(filter).sort({"idate": 1})
+            //Cdev.find({"Department": "Biology", "Floor": "Floor-2"})
             .then(async function(data) {
                 if(data)
                 {
                     var devarray = [];
                     for(var i=0; i<data.length; i++)
                     {
+                        //console.log("ResDev: ", data[i])
                         var indict = {};
 
                         indict['location'] = []
@@ -63,9 +70,9 @@ exports.getDeviceList = (req, res) => {
                     
                     findict['devices'] = devarray;
                     findict['taglist'] = taglist
-                    console.log("Befor Top Mapping: ", clientname, findict)
-                    resdict = await getTopMapping(clientname, findict)
-                    console.log("ResDict: ", resdict )
+                    //console.log("Befor Top Mapping: ", clientname, findict)
+                    resdict = await getTopMapping(clientid, findict)
+                    //console.log("ResDict: ", resdict )
                     res.status(200).send({
                         resdict
                     });
@@ -98,14 +105,14 @@ exports.getDeviceList = (req, res) => {
 }
 
 
-async function getTopMapping(clientname, devdict){
+async function getTopMapping(clienid, devdict){
     var len = devdict.devices.length;
-    console.log("Length: ", len)
+    //console.log("Length: ", len)
     for(var i=0; i<len; i++)
     {
-        console.log("Inside Floop: ", devdict.devices[i])
-        data = await GetDeviceID(clientname, devdict.devices[i])
-        console.log("After GetDeviceID: ",data)
+        //console.log("Inside Floop: ", devdict.devices[i])
+        data = await GetDeviceID(clienid, devdict.devices[i])
+        //console.log("After GetDeviceID: ",data)
         if(data)
         {
             devdict.devices[i].deviceid = data.deviceid
@@ -124,37 +131,22 @@ async function getTopMapping(clientname, devdict){
 
 
 
-function GetDeviceID(clientname, devdict)
+function GetDeviceID(clientid, devdict)
 {
-    console.log("Inside GetDevID: ", clientname, devdict.devid)
     return new Promise(function(resolve, reject) {
 
-       var filter = {"client": clientname, "hwid": devdict.devid, "idate": devdict.idate, "rdate": devdict.rdate}
-       //var filter = {"client": clientname}
-       console.log("Rdev Filter: ", filter)
+       var filter = {"cid": clientid, "hwid": devdict.devid, "idate": devdict.idate, "rdate": devdict.rdate}
        Devices.findOne(filter ,function(err, data){
            if(err)
            {
-               console.log("Error: ", err)
+               //console.log("Error: ", err)
                data = []
                reject(data);
            }
            else
            {
-               console.log("Dev Details: ", data)
                resolve(data)
            }
-           /*else
-           if(data)
-           {
-                console.log("Dev Details: ", data)
-                resolve(data)
-           }
-           else{
-                console.log("Dev Details12: ", data)
-                resolve(data);
-           } */
         });
-
     });
 }

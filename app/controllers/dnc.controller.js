@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 const Client = require('../models/client.model.js');
+const Users = require('../models/user.model.js');
+
+var crypto = require('crypto'); 
 
 exports.alogin = (req, res) => {
     var filter = {"dbdata.user": req.body.influxd.uname, "dbdata.pwd": req.body.influxd.pwd, "dbdata.dbname": req.body.influxd.dbname}
@@ -24,16 +27,77 @@ exports.alogin = (req, res) => {
 }
 
 
+exports.pluginLogin = (req, res) => {
+    var username = {"uname" : req.body.uname};
+    var pwd = {"pwd" : req.body.pwd};
+
+    console.log("Plugin Login")
+
+    Users.findOne(username)
+    .then(function(data) {
+            if(data)
+            {
+                var clientid = data.cid
+                var dbsalt = data.psalt
+                var dbhash = data.phash
+                var level = data.level
+                var filter = {"uname": req.body.uname}
+
+                //console.log("One User found")
+
+                this.hash = crypto.pbkdf2Sync(req.body.pwd, dbsalt,1000, 64, `sha512`).toString(`hex`);
+
+                if(this.hash == dbhash)
+                {
+                    //console.log("Hash matched")
+                    return res.status(200).send({
+                        message: "Success"
+                    });
+               }
+               else
+               {
+                   //console.log("Hash not matched")
+                   return res.status(400).send({
+                       message: "User ID and Password is not valid"
+                   });
+               }
+            }
+            else
+            {
+                console.log("User ID Pwd not valid")
+                return res.status(400).send({
+                  message: "User ID and Password is not valid"
+               });
+            }
+     })
+     .catch((err) => {
+        console.log("Username Read Error", err)
+     })
+};
+
+
 exports.readtags = (req, res) => {
-    //var filter = {"dbdata.user": req.body.influxd.uname, "dbdata.pwd": req.body.influxd.pwd, "dbdata.dbname": req.body.influxd.dbname}
     var filter = {"cname": req.body.influxd.uname}
 
-    console.log("Read Tags: ", filter)
-    
     Client.findOne(filter)
     .then(function(data){
         if(data)
         {
+            if(req.body.influxd.query.includes("WHERE"))
+            {
+                var resstr = req.body.influxd.query.split("WHERE")
+                global.tagreq = resstr[1]
+                var nq = resstr[1].replace(new RegExp("AND", 'g'), "OR")
+                var ql = nq.split("OR")
+        
+                var tagall = extractTags(ql)
+                keydict = tagall[0]
+            }
+            else
+            {
+                global.tagreq = ""
+            }
+            
             res.status(200).send({
                 message: data.taglist
             });
@@ -52,10 +116,9 @@ exports.readtags = (req, res) => {
     });
 }
 
-
 exports.readtagval = (req, res) => {
-    //var filter = {"dbdata.user": req.body.influxd.uname, "dbdata.pwd": req.body.influxd.pwd, "dbdata.dbname": req.body.influxd.dbname}
     var filter = {"cname": req.body.influxd.uname}
+    //console.log("Prev Tag Req: ", global.tagreq)
     Client.findOne(filter)
     .then(async function(data){
         if(data)
@@ -72,17 +135,6 @@ exports.readtagval = (req, res) => {
                 var keydict = {}
                 var filtdict = {}
                 var tagval = []
-
-                if(req.body.influxd.query.includes("WHERE"))
-                {
-                    var resstr = req.body.influxd.query.split("WHERE")
-                    var nq = resstr[1].replace(new RegExp("AND", 'g'), "OR")
-                    var ql = nq.split("OR")
-        
-                    var tagall = extractTags(ql)
-
-                    keydict = tagall[0]
-                }
 
                 try{
                     var gval = await getDNCTagValues(data, tagname, keydict)
@@ -189,7 +241,10 @@ function getDNCTagValues(data1, tagname, filtdict)
                 }
                 resolve(tagval)
             }
-            reject("Data Not Available")
+            else
+            {
+                resolve("Filter Error")
+            }
         }).catch(err => {
             reject("Filter Error")
         });

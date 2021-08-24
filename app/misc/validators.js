@@ -92,29 +92,20 @@ exports.inputvalidation = (instring) => {
 
 
 exports.emailvalidation = (instring) => {
-    // if(!instring.charAt(0).match(/[a-zA-Z0-9]/))
-    // {
-    //     return [false, "should starts with alpha numeric character!"]
-    // }
-    // if(instring.match("^[a-zA-Z0-9-_@.]*$") == null)
-    // {
-    //     return [false, "should not contain space,symbols except '-' '_' "]
-    // }
-
-    // if(instring.length < 8)
-    // {
-    //     return [false, "length should be minimum 8"]
-    // }
-    // return [true, "OK"]
-
-    var pattern = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/;
-    result = pattern.test(instring);
-    if(result){
-        return [true, "OK"];
+    if(!instring.charAt(0).match(/[a-zA-Z0-9]/))
+    {
+        return [false, "should starts with alpha numeric character!"]
     }
-    else{
-        return [false, "Please enter valid email address"];
+    if(instring.match("^[a-zA-Z0-9-_@.]*$") == null)
+    {
+        return [false, "should not contain space,symbols except '-' '_' "]
     }
+
+    if(instring.length < 8)
+    {
+        return [false, "length should be minimum 8"]
+    }
+    return [true, "OK"]
 }
 
 

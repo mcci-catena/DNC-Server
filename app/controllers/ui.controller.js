@@ -29,16 +29,17 @@ function generateRandom()
 function sendEmail(otpNum, req, res)
 {
     var transporter = nodemailer.createTransport({
-        host: 'postfix1',
+        host: 'postfix',
         port: 25,
 		secure: false,
+        tls: {rejectUnauthorized: false},
     });
 
     var mailOptions = {
         from: 'no-reply@mcci.com',
         to: req.body.email,
         subject: 'Test mail from DNC Server',
-        text: 'Your OTP for DNC login is '+ otpNum
+        text: 'Your OTP from DNC is '+ otpNum
     };
     
 	try{
@@ -121,6 +122,32 @@ function addUserInfo(clientId, req, res) {
 	
 }
 
+// update pwd
+function updatePassword(req, res) {
+	this.salt = crypto.randomBytes(8).toString('hex')
+    this.hash = crypto.pbkdf2Sync(req.body.new_pwd, this.salt,1000, 64, `sha512`).toString(`hex`); 
+	
+	const filter = {"email": {$regex: new RegExp(req.body.email, "ig")}};
+    const update = {"psalt": this.salt, "phash": this.hash};
+	
+	Users.findOneAndUpdate(filter, update, { new: true })
+    .then(data => {
+        if(!data) {
+            return res.status(400).send({
+                message: "Invalid email: " +
+                req.body.email
+            });
+        }
+		else{
+		    res.status(200).send({message: "Password updated successfully!"});	
+		}
+    }).catch(err => {
+        res.status(500).send({
+            message: err.message || "Some error occurred while updating password."
+        });
+    });
+}
+
 // Verify OTP message
 function verifyOtp(clientId, req, res) {
 	
@@ -151,6 +178,11 @@ function verifyOtp(clientId, req, res) {
 				// return res.status(200).send({message: "OTP verified"});
 				// return true;
 				addUserInfo(clientId, req, res);
+			}
+			else if(vFlag == 1 && req.body.mode == "fpwd") {
+				// return res.status(200).send({message: "OTP verified"});
+				// return true;
+				updatePassword(req, res);
 			}
 			else {
 				return res.status(400).send({message: "Invalid OTP"});
@@ -345,9 +377,6 @@ exports.asignup = async(req, res) => {
         return res.status(400).send({message: "Email " + rest}); 
     }
 	
-	// status 0, 1, 2 check
-    // email verify in config	
-	// var result = await checkAdminConfig(req, res);
     Config.findOne()
 	.then(data => {
 		if(data) {
@@ -388,6 +417,7 @@ exports.asignup = async(req, res) => {
 	.catch(err => {
 		res.status(500).send({message: "Some error occured when accessing DB"});
 	});
+	
 }
 
 // User sign-up
@@ -435,19 +465,7 @@ exports.usignup = (req, res) => {
 	.catch(err => {
 		res.status(500).send({message: "Some error occured when accessing DB"});
 	});
-}
-
-// Update email
-exports.updateEmail = (req, res) => {
-	// email verify
 	
-	// uemail verify
-	
-	// otp verifyAuth
-	
-	// email & otp match
-	
-	// save info & otp "verified"
 }
 
 // List user
@@ -556,10 +574,18 @@ exports.deleteuser = (req, res) => {
 
 // Forgot password
 exports.forgotpwd = (req, res) => {
-	if(!req.body.email || !req.body.new_pwd || !req.body.otpnum){
+	if(!req.body.email || !req.body.new_pwd || !req.body.otpnum || !req.body.mode){
         return res.status(400).send({
             message: "mandatory field missing"
         });
+    }
+	
+	// email validation
+	var [resb, rest] = validfn.emailvalidation(req.body.email)
+
+    if(!Boolean(resb))
+    {
+        return res.status(400).send({message: "Email " + rest}); 
     }
 	
 	if(req.body.new_pwd)
@@ -570,29 +596,9 @@ exports.forgotpwd = (req, res) => {
             return res.status(400).send({message: "Password "+rest}); 
         }
 	}
-	
-	this.salt = crypto.randomBytes(8).toString('hex')
-    this.hash = crypto.pbkdf2Sync(req.body.new_pwd, this.salt,1000, 64, `sha512`).toString(`hex`); 
-	
-	const filter = {"email": {$regex: new RegExp(req.body.email, "ig")}};
-    const update = {"psalt": this.salt, "phash": this.hash};
-	
-	Users.findOneAndUpdate(filter, update, { new: true })
-    .then(data => {
-        if(!data) {
-            return res.status(400).send({
-                message: "Invalid email: " +
-                req.body.email
-            });
-        }
-		else{
-		    res.status(200).send({message: "Password updated successfully!"});	
-		}
-    }).catch(err => {
-        res.status(500).send({
-            message: err.message || "Some error occurred while updating password."
-        });
-    });
+	 
+	var clientId = "dummy";
+	verifyOtp(clientId, req, res);
 }
 
 // Login
@@ -603,7 +609,7 @@ exports.uiLogin = (req, res) => {
         });
     }
 	
-	var username = {"uname" : {$regex: new RegExp(req.body.uname, "ig")}};
+	var username = {"uname" : req.body.uname};
     var pwd = {"pwd" : req.body.pwd};
 	
 	Users.findOne(username)
@@ -620,13 +626,85 @@ exports.uiLogin = (req, res) => {
 			}
 			else {
 				res.status(400).send({
-                    message: "Invalid password"
+                    message: "Invalid username/password"
                 });
 			}
 		}
 		else{
 			res.status(400).send({
                 message: "User not exists"
+            });
+		}
+	})
+	.catch(err => {
+		res.status(500).send({
+            message: err.message || "Some error occurred while accessing DB."
+        });
+	});
+}
+
+// OTP for forgot password
+exports.fpSendOtp = async(req, res) => {
+	if(!req.body.email || !req.body.mode){
+        return res.status(400).send({
+            message: "mandatory field missing"
+        });
+    }
+	
+	// email validation
+	const [resb, rest] = validfn.emailvalidation(req.body.email)
+
+    if(!Boolean(resb))
+    {
+        return res.status(400).send({message: "Email " + rest}); 
+    }
+	
+	var username = '';
+	var currentDate = new Date();
+	var otpNum = generateRandom();
+	var sOtp = String(otpNum);
+	this.salt = crypto.randomBytes(8).toString('hex')
+    this.hash = crypto.pbkdf2Sync(sOtp, this.salt,100, 16, `sha512`).toString(`hex`);
+	
+	Users.find({"email": req.body.email})
+	.then(data => {
+		if(data.length == 1) {
+			username = data[0].uname;
+			
+			try{
+				sendEmail(sOtp, req, res);
+			}
+			catch(err){
+				return res.status(500).send({
+                    message: err.message || "OTP sending failed!"
+                });
+			}
+			
+			
+			const emotp = new emotps({
+                uname: username,
+                email: req.body.email,
+                otpsalt: this.salt,
+                otphash: this.hash,
+                functionMode: req.body.mode,
+                status: "non-verified",
+                tvalid: currentDate
+            });
+				
+			emotp.save()
+            .then(data => {
+                res.status(200).send({
+                    message: "OTP Sent Successfully!"
+                });
+            }).catch(err => {
+                res.status(500).send({
+                    message: err.message || "OTP Process failed!"
+                });
+            });
+		}
+		else {
+			return res.status(400).send({
+                message: "Email Id not exist. Please sign up"
             });
 		}
 	})
