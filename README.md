@@ -1,2 +1,1 @@
-
-Generic DNC Server is designed to provide location based data access with felexible hierachy structure for each client.
+Generic DNC is a logical data Server, designed to provide location based data measurement by provide customized tag mapping on top og general database where sensor data is organized based on device IDs. This is acheieved by adding customized tags to the selected location and generate query based on the customzied tags.
