@@ -23,29 +23,32 @@
 ############################################################################*/
 
 const devctrl = require('../controllers/devreg.controller.js');
-//const tokenfn = require('../misc/auth.js');
+const tokenfn = require('../misc/auth.js');
 
 module.exports = (app) => {
     
     // Add device 
     //Add a new device with Hardware ID under a Client
     //app.post('/regdev', tokenfn.authenticateJWT, devctrl.mcreate);
-    app.post('/regdev', devctrl.mcreate);
+    app.post('/regdev', tokenfn.authenticateJWT, devctrl.mcreate);
 
-    // List all devices assigned and unassigned of all clients
+    //List all devices assigned and unassigned of all clients
     //app.get('/listadev', tokenfn.authenticateJWT, devctrl.adviceList);
-    //app.get('/listardev', devctrl.adeviceList);
+    app.get('/listardev', tokenfn.authenticateJWT, devctrl.adeviceList);
 
     // List all devices of a Client
-    //app.get('/listardev/:client', devctrl.adeviceClient);
+    app.get('/listardev/:client', tokenfn.authenticateJWT, devctrl.adeviceClient);
     
     // List all devices under a client which are not assigned to a site/location
     //app.get('/listfdev/:client', tokenfn.authenticateJWT, devctrl.mdeviceList);
+    app.get('/listfrdev/:client', tokenfn.authenticateJWT, devctrl.mfdeviceList);
 
     // Edit a device Hardware/device under a client which are not assigned to a sit/location
     //app.put('/regdev/:client', tokenfn.authenticateJWT, devctrl.medit);
+    app.put('/regdev/:client', tokenfn.authenticateJWT, devctrl.medit);
 
     // Delete a device Hardware/device under a client which are not assigned to a sit/location
-   // app.delete('/regdev/:client', tokenfn.authenticateJWT, devctrl.mdelete);
+    // app.delete('/regdev/:client', tokenfn.authenticateJWT, devctrl.mdelete);
+    app.delete('/regdev/:client', tokenfn.authenticateJWT, devctrl.mdelete);
 
 }
