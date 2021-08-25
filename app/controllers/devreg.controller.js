@@ -384,13 +384,7 @@ exports.mfdeviceList = (req, res) => {
                                 var results = {};
                                 for(var i=0; i<ndata.length; i++)
                                 {
-                                    console.log(ndata[i]['hwid'])
                                     devids.push(ndata[i].hwid);
-                                }
-                                
-                                for(var i=0; i<devids.length; i++)
-                                {
-                                    console.log("Data from Devices: ", devids[i])
                                 }
                                 
                                 for(var i=0; i<nhwids.length; i++)
@@ -553,12 +547,7 @@ exports.medit = (req, res) => {
             {
                 throw new Error('New Client doesnt exists');
             }
-            else
-            {
-                console.log("No Error")
-            }
-
-
+            
             if(req.body.nhwid)
             {
                 update.hwid = req.body.nhwid

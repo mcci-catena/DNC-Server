@@ -69,7 +69,6 @@ exports.create = (req, res) => {
     var filter = {"cname": {$regex: new RegExp(req.body.cname, "ig")}}
     Client.findOne(filter)
     .then(function(data) {
-        //console.log(data)
         if(data)
         {
             return res.status(400).send({message: "Client already exists!"})
@@ -121,8 +120,7 @@ exports.find_client = (req, res) => {
             });            
         }
         else{
-			console.log("Find a client: " + data)
-            res.status(200).send(data);   
+			res.status(200).send(data);   
         }
     }).catch(err => {
         if(err.kind === 'ObjectId') {
@@ -143,7 +141,6 @@ exports.find_client = (req, res) => {
 exports.find_clients = (req, res) => {
     Client.estimatedDocumentCount()
     .then(data => {
-        console.log("Client collection row count: " + data);
         if(data > 0) {
             Client.find()
             .then(data => {
@@ -237,7 +234,6 @@ exports.fetch_db_names = (req, res) => {
 		return response.json();
 	})
     .then(json => {
-		// console.log(json);
 		var result = {};
 		var dbNames = [];
 		getDbArrList = json.results[0].series[0].values;

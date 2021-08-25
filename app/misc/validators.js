@@ -24,7 +24,9 @@ exports.validatedate = (inputText) => {
         var opera2 = inputText.split('-');
         lopera1 = opera1.length;
         lopera2 = opera2.length;
+        
         // Extract the string into month, date and year
+        
         if (lopera1>1)
         {
             var pdate = inputText.split('/');
@@ -36,13 +38,13 @@ exports.validatedate = (inputText) => {
         var mm  = parseInt(pdate[0]);
         var dd = parseInt(pdate[1]);
         var yy = parseInt(pdate[2]);
+        
         // Create list of days of a month [assume there is no leap year by default]
         var ListofDays = [31,28,31,30,31,30,31,31,30,31,30,31];
         if (mm==1 || mm>2)
         {
             if (dd>ListofDays[mm-1])
             {
-                console.log('1-Invalid date format!');
                 return false;
             }
         }
@@ -55,12 +57,10 @@ exports.validatedate = (inputText) => {
             }
             if ((lyear==false) && (dd>=29))
             {
-                //console.log('2-Invalid date format!');
                 return false;
             }
             if ((lyear==true) && (dd>29))
             {
-                //console.log('3-Invalid date format!');
                 return false;
             }
         }
@@ -68,7 +68,6 @@ exports.validatedate = (inputText) => {
     }
     else
     {
-        //console.log("4-Invalid date format!");
         return false;
     }
 }

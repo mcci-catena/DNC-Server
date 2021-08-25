@@ -31,8 +31,6 @@ exports.pluginLogin = (req, res) => {
     var username = {"uname" : req.body.uname};
     var pwd = {"pwd" : req.body.pwd};
 
-    console.log("Plugin Login")
-
     Users.findOne(username)
     .then(function(data) {
             if(data)
@@ -43,20 +41,16 @@ exports.pluginLogin = (req, res) => {
                 var level = data.level
                 var filter = {"uname": req.body.uname}
 
-                //console.log("One User found")
-
                 this.hash = crypto.pbkdf2Sync(req.body.pwd, dbsalt,1000, 64, `sha512`).toString(`hex`);
 
                 if(this.hash == dbhash)
                 {
-                    //console.log("Hash matched")
                     return res.status(200).send({
                         message: "Success"
                     });
                }
                else
                {
-                   //console.log("Hash not matched")
                    return res.status(400).send({
                        message: "User ID and Password is not valid"
                    });
@@ -64,7 +58,6 @@ exports.pluginLogin = (req, res) => {
             }
             else
             {
-                console.log("User ID Pwd not valid")
                 return res.status(400).send({
                   message: "User ID and Password is not valid"
                });
@@ -85,7 +78,6 @@ exports.readtags = (req, res) => {
         {
             /*if(req.body.influxd.query.includes("WHERE"))
             {
-                //console.log("Tag Query: ",req.body.influxd.query)
                 var resstr = req.body.influxd.query.split("WHERE")
                 global.tagreq = resstr[1]
                 var nq = resstr[1].replace(new RegExp("AND", 'g'), "OR")
@@ -119,7 +111,6 @@ exports.readtags = (req, res) => {
 
 exports.readtagval = (req, res) => {
     var filter = {"cname": req.body.influxd.uname}
-    //console.log("Prev Tag Req: ", global.tagreq)
     Client.findOne(filter)
     .then(async function(data){
         if(data)
