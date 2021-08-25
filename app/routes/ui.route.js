@@ -6,7 +6,7 @@ module.exports = (app) => {
     app.get('/signup', uictrl.signup);
     
     // Admin Email configuration
-    // app.post('/saecon', uictrl.updtaemail);
+    app.post('/saeorg', uictrl.updtaeorg);
     
     // Admin signup
     app.post('/asignup', uictrl.asignup);

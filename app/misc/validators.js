@@ -151,3 +151,11 @@ exports.hwidvalidation = (instring) => {
     }
     return [true, "OK"]
 }
+
+exports.lengthvalidation = (instring) => {
+    if(instring.length < 3)
+    {
+        return [false, "length should be minimum 3"]
+    }
+    return [true, "OK"]
+}

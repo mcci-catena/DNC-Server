@@ -80,7 +80,10 @@ function addAdminUserInfo(clientId, req, res) {
 			// res.status(200).send("Admin signed up successfully");
 		user.save()
         .then(data => {
-		     res.status(200).send("Admin signed up successfully");
+            //res.status(200).send("Admin signed up successfully");
+            res.status(200).send({
+                message: "Admin signed up successfully!"
+            });
         })
 		.catch(err => {
             res.status(500).send({
@@ -276,6 +279,83 @@ function sendToken(req,res,level)
 
 /* API functions */
 
+exports.updtaeorg = (req, res) => {
+    if(!req.body.aemail || !req.body.aorg) {
+        return res.status(400).send({
+            message: "Email and Org can not be empty"
+        });
+    }
+
+    var [resb, rest] = validfn.emailvalidation(req.body.aemail)
+
+    if(!Boolean(resb))
+    {
+        return res.status(400).send({message: "Email "+rest}); 
+    }
+
+    [resb, rest] = validfn.lengthvalidation(req.body.aorg)
+
+    if(!Boolean(resb))
+    {
+        return res.status(400).send({message: "Org "+rest}); 
+    }
+
+    Config.findOne()
+    .then(function(data) {
+        if(data)
+        {
+            if(data.status == "2")
+            {
+                res.status(200).send({message: "Admin account already created"})
+            }
+            else
+            {
+                var update = {"email": req.body.aemail, "org": req.body.aorg}
+                Config.findOneAndUpdate(update, {useFindAndModify: false, new: true})
+                .then(function(data){
+                    if(data)
+                    {
+                        res.status(200).send(data)
+                    }
+                    else
+                    {
+                        return res.status(400).send({
+                            message: "Record not found "
+                        });
+                    }   
+                })
+                .catch(err => {
+                    res.status(500).send({
+                        message: err.message || "Error occurred while updating admin data."
+                    });
+                });
+            }
+            
+        }
+        else
+        {
+            cdict = {}
+            cdict["email"] = req.body.aemail
+            cdict["org"] = req.body.aorg
+            cdict["status"] = "1"
+            const config = new Config(cdict);
+            config.save()
+            .then(data => {
+                res.status(200).send(data);
+            }).catch(err => {
+                res.status(500).send({
+                    message: err.message || "Some error occurred while configuring admin data."
+                });
+            });   
+        }
+
+    }).catch(err => {
+        res.status(500).send({
+            message: err.message || "Some error occurred while reading the Config."
+        });
+    });  
+}
+
 // To get sign-up mode
 exports.signup = (req, res) => {
     Config.findOne()
@@ -370,7 +450,7 @@ exports.asignup = async(req, res) => {
     }
 	
 	// email validation
-	const [resb, rest] = validfn.emailvalidation(req.body.email)
+	var [resb, rest] = validfn.emailvalidation(req.body.email)
 
     if(!Boolean(resb))
     {
@@ -384,25 +464,18 @@ exports.asignup = async(req, res) => {
             {
                 return res.status(400).send({message: "Admin email not configured"})
             }
-			else if(data.status == "1" && data.email == req.body.email) {
-				Clients.find({"cname": req.body.cname})
-	            .then(data => {
-		            if(data.length == 1) {
-			            var clientId = data[0].cid;
-						verifyOtp(clientId, req, res);
-		            }
-		            else {
-			            res.status(400).send({
-			                message: "Invalid client name"
-		                });
-		            }
-	            })
-	            .catch(err => {
-		            res.status(400).send({
-			            message: "Some error occured when accessing DB"
-		            });
-	            });
-			}
+			else 
+            if(data.status == "1") 
+            {
+				if( data.email == req.body.email && data.org == req.body.cname)
+                {
+                    verifyOtp("0000", req, res);
+                }
+                else
+                {
+                    return res.status(400).send({message: "Admin data not match with the record"})
+                }
+            }
 		    else if(data.status == "2") {
 				return res.status(400).send({message: "Admin email already configured"})
 			}

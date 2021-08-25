@@ -83,8 +83,9 @@ exports.readtags = (req, res) => {
     .then(function(data){
         if(data)
         {
-            if(req.body.influxd.query.includes("WHERE"))
+            /*if(req.body.influxd.query.includes("WHERE"))
             {
+                //console.log("Tag Query: ",req.body.influxd.query)
                 var resstr = req.body.influxd.query.split("WHERE")
                 global.tagreq = resstr[1]
                 var nq = resstr[1].replace(new RegExp("AND", 'g'), "OR")
@@ -96,7 +97,7 @@ exports.readtags = (req, res) => {
             else
             {
                 global.tagreq = ""
-            }
+            } */
             
             res.status(200).send({
                 message: data.taglist
