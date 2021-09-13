@@ -65,7 +65,6 @@ exports.create = (req, res) => {
             mschema["latitude"] = {"type": "String"}
             mschema["longitude"] = {"type": "String"}
             var taglist = data.taglist
-            console.log("TagList: ", taglist, taglist.length)
             for(i=0; i<taglist.length; i++)
             {
                 mschema[taglist[i]] = {"type": "String"}
@@ -98,9 +97,6 @@ exports.create = (req, res) => {
             var klist = Object.keys(req.body)
             var vlist = Object.values(req.body)
 
-            console.log("Keys: ", klist)
-            console.log("Values: ", vlist)
-
             tagdict = {}
             for(i=0; i<klist.length; i++)
             {
@@ -120,17 +116,12 @@ exports.create = (req, res) => {
             indict["idate"] = req.body.datetime
             indict["rdate"] = ''
 
-
-            console.log("Findict: ", indict)
-
             //filtdict["devEUI"] = req.body.id
             filtdict["rdate"] = ''
 
             devfilt = {}
             devfilt["hwid"] = req.body.id
             devfilt["rdate"] = ''
-
-            console.log("DevFilt: ", devfilt)
 
             Cdev.findOne(devfilt)
             .then(function(data){
@@ -301,8 +292,7 @@ exports.removeDevice = (req, res) => {
     }
 
     var klist = Object.keys(req.body)
-    console.log("Keys: ", klist)
-
+    
     var filter = {};
     for(var i=0; i<klist.length; i++)
     {
@@ -313,8 +303,6 @@ exports.removeDevice = (req, res) => {
     }
     filter["rdate"] = ''
     
-    console.log("Filter: ", filter)
-
     var dttmstr = req.body.datetime.split(",")
     var dtstr = dttmstr[0].trim();
     var tmstr = dttmstr[1].trim();
@@ -353,9 +341,6 @@ exports.removeDevice = (req, res) => {
 
             var update = {"rdate": new Date(req.body.datetime)};
 
-            console.log("Find One")
-            console.log(filter)
-
             Cdev.findOne(filter)
             .then(function(data) {
                 if(data)
@@ -364,7 +349,6 @@ exports.removeDevice = (req, res) => {
                     var rdate = new Date(req.body.datetime)   
                     if(rdate > idate)
                     {
-                        console.log("Find and Update")
                         Cdev.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
                         .then(async function(data){
                             if(data)
@@ -374,9 +358,7 @@ exports.removeDevice = (req, res) => {
                                 devdict.hwid = data.hwid
                                 devdict.idate = data.idate
                                 devdict.rdate = data.rdate
-                                console.log("Remove Device")
                                 stat = await regdev.removemdevice(devdict)
-                                console.log("Remove Device Done")
                                 if(stat)
                                 {
                                     res.status(200).send(data)
@@ -495,9 +477,6 @@ exports.replaceDevice = (req, res) => {
 
             var update = {"rdate": new Date(req.body.datetime)};
 
-            console.log("Find One")
-            console.log(filter)
-
             Cdev.findOne(filter)
             .then(function(data) {
                 if(data)
@@ -536,9 +515,7 @@ exports.replaceDevice = (req, res) => {
                                         devdict.hwid = data.hwid
                                         devdict.idate = data.idate
                                         devdict.rdate = data.rdate
-                                        console.log("Remove Device")
                                         stat = await regdev.removemdevice(devdict)
-                                        console.log("Remove Device Done")
                                         if(stat)
                                         {
                                             const ndev = new Cdev(indict)

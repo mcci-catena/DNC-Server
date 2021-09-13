@@ -30,8 +30,6 @@ const NoteSchema = mongoose.Schema({
     deviceid: String,
     devID: String,
     devEUI: String,
-    mmname: String,
-    fdname: String,
     idate: Date,
     rdate: Date
 }, {

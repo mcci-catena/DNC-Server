@@ -77,10 +77,8 @@ function addAdminUserInfo(clientId, req, res) {
 	const update = {"status": "2"};
 	Config.findOneAndUpdate(filter, update, { new: true })
 	.then(data => {
-			// res.status(200).send("Admin signed up successfully");
 		user.save()
         .then(data => {
-            //res.status(200).send("Admin signed up successfully");
             res.status(200).send({
                 message: "Admin signed up successfully!"
             });
@@ -111,7 +109,6 @@ function addUserInfo(clientId, req, res) {
         level: "1",
         obsolete: false
     });
-	
 	
 	user.save()
     .then(data => {
@@ -157,15 +154,11 @@ function verifyOtp(clientId, req, res) {
 	emotps.find({"email": req.body.email})
 	.then(data => {
 		if(data.length > 0){
-			// res.status(200).send(data);
 			vFlag = 0;
 			for(i=0; i<data.length; i++) {
 				var dbsalt = data[i].otpsalt;
                 var dbhash = data[i].otphash;
 				var rHash = crypto.pbkdf2Sync(req.body.otpnum, dbsalt,100, 16, `sha512`).toString(`hex`);
-				
-				console.log(dbhash);
-				console.log(rHash);
 				
 				if(dbhash == rHash && data[i].functionMode == req.body.mode && data[i].status == "non-verified") {
 					vFlag = 1;
@@ -173,23 +166,16 @@ function verifyOtp(clientId, req, res) {
 			}
 			
 			if(vFlag == 1 && req.body.mode == "asignup") {
-				// return res.status(200).send({message: "OTP verified"});
-				// return true;
 				addAdminUserInfo(clientId, req, res);
 			}
 			else if(vFlag == 1 && req.body.mode == "usignup") {
-				// return res.status(200).send({message: "OTP verified"});
-				// return true;
 				addUserInfo(clientId, req, res);
 			}
 			else if(vFlag == 1 && req.body.mode == "fpwd") {
-				// return res.status(200).send({message: "OTP verified"});
-				// return true;
 				updatePassword(req, res);
 			}
 			else {
 				return res.status(400).send({message: "Invalid OTP"});
-				// return false;
 			}
 		}
 		else {
@@ -212,7 +198,6 @@ function getClientId(req, res) {
 	Clients.find({"cname": cname})
 	.then(data => {
 		if(data.length == 1) {
-			// res.status(200).send(data);
 			return data[0].cid;
 		}
 		else {

@@ -4,7 +4,8 @@ const tokenfn = require('../misc/auth.js');
 module.exports = (app) => {
     
     // Create a new Client
-    app.post('/client', tokenfn.authenticateJWT, clientctrl.create);
+    //app.post('/client', tokenfn.authenticateJWT, clientctrl.create);
+    app.post('/client', clientctrl.create);
 
     // Retrieve all clients
     app.get('/clients', tokenfn.authenticateJWT, clientctrl.find_clients);
@@ -22,6 +23,11 @@ module.exports = (app) => {
 	app.get('/client-device-status/:clientId', tokenfn.authenticateJWT, clientctrl.find_device_register_status);
 	
 	// Fetch database name from InfluxDB
-	app.post('/fetch-db-info', tokenfn.authenticateJWT, clientctrl.fetch_db_names);
+	//app.post('/fetch-db-info', tokenfn.authenticateJWT, clientctrl.fetch_db_names);
+    app.post('/fetch-db-info', clientctrl.fetch_db_names);
+
+    // Fetch measurement name from InfluxDB
+	//app.post('/fetch-mmt-info', tokenfn.authenticateJWT, clientctrl.fetch_mmt_names);
+    app.post('/fetch-mmt-info', clientctrl.fetch_mmt_names);
   
 }

@@ -56,7 +56,8 @@ exports.create = (req, res) => {
         return res.status(400).send({message: "Client name "+rest}); 
     }
 	
-	if(!req.body.url || !req.body.user || !req.body.pwd || !req.body.dbname || !req.body.tlist)
+	if(!req.body.url || !req.body.user || !req.body.pwd || !req.body.dbname 
+        || !req.body.mmtname || !req.body.tlist)
     {
         return res.status(400).send({message: "Field can't be empty"})
     }
@@ -69,7 +70,6 @@ exports.create = (req, res) => {
     var filter = {"cname": {$regex: new RegExp(req.body.cname, "ig")}}
     Client.findOne(filter)
     .then(function(data) {
-        //console.log(data)
         if(data)
         {
             return res.status(400).send({message: "Client already exists!"})
@@ -87,6 +87,7 @@ exports.create = (req, res) => {
                     dbdata["user"] = req.body.user
                     dbdata["pwd"] = req.body.pwd
                     dbdata["dbname"] = req.body.dbname
+                    dbdata["mmtname"] = req.body.mmtname
 
                     cdict = {}
                     cdict["cname"] = req.body.cname
@@ -121,8 +122,7 @@ exports.find_client = (req, res) => {
             });            
         }
         else{
-			console.log("Find a client: " + data)
-            res.status(200).send(data);   
+			res.status(200).send(data);   
         }
     }).catch(err => {
         if(err.kind === 'ObjectId') {
@@ -143,7 +143,6 @@ exports.find_client = (req, res) => {
 exports.find_clients = (req, res) => {
     Client.estimatedDocumentCount()
     .then(data => {
-        console.log("Client collection row count: " + data);
         if(data > 0) {
             Client.find()
             .then(data => {
@@ -237,7 +236,6 @@ exports.fetch_db_names = (req, res) => {
 		return response.json();
 	})
     .then(json => {
-		// console.log(json);
 		var result = {};
 		var dbNames = [];
 		getDbArrList = json.results[0].series[0].values;
@@ -257,6 +255,46 @@ exports.fetch_db_names = (req, res) => {
 	});
 }
 
+
+exports.fetch_mmt_names = (req, res) => {
+	var influxUrl = req.body.url;
+	var influxUser = req.body.user;
+	var influxPwd = req.body.pwd;
+    var influxDbn = req.body.dbn;
+	
+	var url = influxUrl + "/query?db="+influxDbn+"&q=SHOW MEASUREMENTS LIMIT 100";
+	var authPwd = influxUser + ":" + influxPwd;
+	var b64Pwd = Buffer.from(authPwd).toString('base64');
+	
+	const headers = {
+		"Authorization": "Basic " + b64Pwd
+	}
+	
+	fetch(url, {method:'GET',
+        headers: headers,
+       })
+    .then(response => {
+		return response.json();
+	})
+    .then(json => {
+		var result = {};
+		var mmtNames = [];
+		getDbArrList = json.results[0].series[0].values;
+		
+		for (var i=0; i<getDbArrList.length; i++) {
+			mmtNames[i] = getDbArrList[i][0];
+		}
+		
+		result.mmt_list = mmtNames;
+		
+		return res.status(200).send(result);
+	})
+	.catch(err => {
+		return res.status(500).send({
+            message: "Error fetching db names: " + err
+        });
+	});
+}
 
 exports.find_device_register_status = (req, res) => {
 	var clientDevice = "devices" + String(req.params.clientId);

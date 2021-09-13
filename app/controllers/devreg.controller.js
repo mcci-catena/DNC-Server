@@ -53,8 +53,7 @@ getDevSchema = (client) => {
 exports.mcreate = (req, res) => {
 
     if(!req.body.client || !req.body.hwid || (!req.body.deviceid && 
-        !req.body.devID && !req.body.devEUI ) || !req.body.mmname ||
-        !req.body.fdname || !req.body.datetime) {
+        !req.body.devID && !req.body.devEUI ) || !req.body.datetime) {
  
         return res.status(400).send({
             message: "mandatory field missing"
@@ -182,8 +181,6 @@ function addDevice(req, res)
         deviceid: deviceid,
         devID: devID,
         devEUI: devEUI,
-        mmname: req.body.mmname,
-        fdname: req.body.fdname,
         idate: new Date(req.body.datetime),
         rdate: ''
     });    
@@ -195,8 +192,6 @@ function addDevice(req, res)
         resdict["Deviceid"] = data.deviceid;
         resdict["Dev ID"] = data.devID;
         resdict["Dev EUI"] = data.devEUI;
-        resdict["Meas Name"] = data.mmname;
-        resdict["Field Name"] = data.fdname;
         res.status(200).send(resdict);
     })
     .catch(err => {
@@ -224,8 +219,6 @@ exports.adeviceList = (req, res) => {
                 dict['deviceid'] = data[i].deviceid;
                 dict['devID'] = data[i].devID;
                 dict['devEUI'] = data[i].devEUI;
-                dict['mmname'] = data[i].mmname;
-                dict['fdname'] = data[i].fdname;
                 dict['idate'] = data[i].idate;
                 dict['rdate'] = data[i].rdate;
                 finlist.push(dict);
@@ -296,8 +289,6 @@ exports.adeviceClient = (req, res) => {
                         dict['deviceid'] = data[i].deviceid;
                         dict['devID'] = data[i].devID;
                         dict['devEUI'] = data[i].devEUI;
-                        dict['mmname'] = data[i].mmname;
-                        dict['fdname'] = data[i].fdname;
                         dict['idate'] = data[i].idate;
                         dict['rdate'] = data[i].rdate;
                         finlist.push(dict);
@@ -384,13 +375,7 @@ exports.mfdeviceList = (req, res) => {
                                 var results = {};
                                 for(var i=0; i<ndata.length; i++)
                                 {
-                                    console.log(ndata[i]['hwid'])
                                     devids.push(ndata[i].hwid);
-                                }
-                                
-                                for(var i=0; i<devids.length; i++)
-                                {
-                                    console.log("Data from Devices: ", devids[i])
                                 }
                                 
                                 for(var i=0; i<nhwids.length; i++)
@@ -475,12 +460,10 @@ exports.removemdevice = (devdict) => {
     });
 }
 
-
 // Edit a device
 exports.medit = (req, res) => {
     if(!req.params.client || !req.body.hwid || (!req.body.deviceid && 
        !req.body.devID && !req.body.devEUI && !req.body.nclient &&
-       !req.body.mmname && !req.body.fdname &&
        !req.body.nhwid) || !req.body.datetime) {
 
         return res.status(400).send({
@@ -525,7 +508,6 @@ exports.medit = (req, res) => {
                           "rdate": ''}
             var update = {"cid": data.cid, "hwid": req.body.hwid,
                           "deviceid": deviceid, "devID": devID, "devEUI": devEUI,
-                          "mmname": req.body.mmname, "fdname": req.body.fdname,
                           "idate": new Date(req.body.datetime)};
             
             var err_flg = false
@@ -553,12 +535,7 @@ exports.medit = (req, res) => {
             {
                 throw new Error('New Client doesnt exists');
             }
-            else
-            {
-                console.log("No Error")
-            }
-
-
+            
             if(req.body.nhwid)
             {
                 update.hwid = req.body.nhwid
