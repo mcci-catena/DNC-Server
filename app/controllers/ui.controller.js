@@ -269,7 +269,7 @@ function sendToken(req,res,level)
 {
     const user = req.body.uname;
 
-    jwt.sign({user}, constants.KEY_SECRET, {expiresIn: '60s'}, (err, token) => {
+    jwt.sign({user}, constants.KEY_SECRET, {expiresIn: '1800s'}, (err, token) => {
             if(token)
             {
                 var resdict = {};
