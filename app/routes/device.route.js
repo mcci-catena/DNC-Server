@@ -1,3 +1,27 @@
+/*############################################################################
+# 
+# Module: device.route.js
+#
+# Description:
+#     Route for Device Configuration End points
+#
+# Copyright notice:
+#     This file copyright (c) 2021 by
+#
+#         MCCI Corporation
+#         3520 Krums Corners Road
+#         Ithaca, NY  14850
+#
+#     Released under the MCCI Corporation.
+#
+# Author:
+#     Seenivasan V, MCCI Corporation February 2021
+#
+# Revision history:
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#       Module created
+############################################################################*/
+
 const devctrl = require('../controllers/device.controller.js');
 const tokenfn = require('../misc/auth.js');
 
@@ -17,6 +41,10 @@ module.exports = (app) => {
     // List all device ID under a deviceName
     //app.post('/listdev/:devName', devctrl.deviceList);
    
+    // Edit a device from a location
+    //app.put('/device/:client', tokenfn.authenticateJWT, devctrl.medit);
+    app.put('/device/:client', tokenfn.authenticateJWT, devctrl.medit);
+    
     // Remove a device from a location    
     // app.put('/rmdevice/:devName', tokenfn.authenticateJWT, devctrl.updateRemoveStatus);
     app.put('/rmdev/:cname', tokenfn.authenticateJWT, devctrl.removeDevice);

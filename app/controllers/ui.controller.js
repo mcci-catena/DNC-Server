@@ -1,7 +1,30 @@
+/*############################################################################
+# 
+# Module: ui.controller.js
+#
+# Description:
+#     Endpoint implementation for User Interface
+#
+# Copyright notice:
+#     This file copyright (c) 2021 by
+#
+#         MCCI Corporation
+#         3520 Krums Corners Road
+#         Ithaca, NY  14850
+#
+#     Released under the MCCI Corporation.
+#
+# Author:
+#     Seenivasan V, MCCI Corporation February 2021
+#
+# Revision history:
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#       Module created
+############################################################################*/
+
 const Config = require('../models/config.model.js');
 const Users = require('../models/user.model.js');
 const Clients = require('../models/client.model.js');
-const otplogs = require('../models/otplog.model.js');
 const emotps = require('../models/emotp.model.js');
 
 const jwt = require('jsonwebtoken');
@@ -186,7 +209,7 @@ function verifyOtp(clientId, req, res) {
 	})
 	.catch(err => {
 		res.status(500).send({
-			message: "Some error occured when accessing DB"
+			message: "Error occurred while accessing DB"
 		});
 	});
 }
@@ -246,7 +269,7 @@ function sendToken(req,res,level)
 {
     const user = req.body.uname;
 
-    jwt.sign({user}, constants.KEY_SECRET, {expiresIn: '1800s'}, (err, token) => {
+    jwt.sign({user}, constants.KEY_SECRET, {expiresIn: '60s'}, (err, token) => {
             if(token)
             {
                 var resdict = {};
@@ -329,14 +352,14 @@ exports.updtaeorg = (req, res) => {
                 res.status(200).send(data);
             }).catch(err => {
                 res.status(500).send({
-                    message: err.message || "Some error occurred while configuring admin data."
+                    message: err.message || "Error occurred while configuring admin data."
                 });
             });   
         }
 
     }).catch(err => {
         res.status(500).send({
-            message: err.message || "Some error occurred while reading the Config."
+            message: err.message || "Error occurred while reading the config."
         });
     });  
 }
@@ -374,7 +397,7 @@ exports.signup = (req, res) => {
 
     }).catch(err => {
         res.status(500).send({
-            message: err.message || "Some error occurred while reading the Config."
+            message: err.message || "Error occurred while reading the config."
         });
     });  
 
@@ -430,7 +453,7 @@ exports.sendOtp = async(req, res) => {
 exports.asignup = async(req, res) => {
 	if(!req.body.cname || !req.body.uname || !req.body.pwd || !req.body.email || !req.body.otpnum) {
         return res.status(400).send({
-            message: "Missed to fill mandatory field"
+            message: "mandatory field missing"
         });
     }
 	
@@ -465,7 +488,7 @@ exports.asignup = async(req, res) => {
 				return res.status(400).send({message: "Admin email already configured"})
 			}
 			else {
-				return res.status(400).send({message: "Not admin user"})
+				return res.status(400).send({message: "Not an admin user"})
 			}
 		}
 		else {
@@ -473,7 +496,7 @@ exports.asignup = async(req, res) => {
 		}
 	})
 	.catch(err => {
-		res.status(500).send({message: "Some error occured when accessing DB"});
+		res.status(500).send({message: "Error occured while accessing DB"});
 	});
 	
 }
@@ -482,7 +505,7 @@ exports.asignup = async(req, res) => {
 exports.usignup = (req, res) => {
 	if(!req.body.cname || !req.body.uname || !req.body.pwd || !req.body.email || !req.body.otpnum) {
         return res.status(400).send({
-            message: "Missed to fill mandatory field"
+            message: "mandatory field missing"
         });
     }
 	
@@ -515,13 +538,13 @@ exports.usignup = (req, res) => {
 	        })
 	        .catch(err => {
 		            res.status(400).send({
-			            message: "Some error occured when accessing DB"
+			            message: "Error occured while accessing DB"
 		            });
 	        });
 		}
 	})
 	.catch(err => {
-		res.status(500).send({message: "Some error occured when accessing DB"});
+		res.status(500).send({message: "Error occured while accessing DB"});
 	});
 	
 }
@@ -538,7 +561,7 @@ exports.listuser = (req, res) => {
 		}
 	})
 	.catch(err => {
-		res.status(500).send({message: "Error accessing DB"});
+		res.status(500).send({message: "Error while accessing DB"});
 	});
 }
 
@@ -595,7 +618,7 @@ exports.updateuser = (req, res) => {
     })
     .catch(err => {
         res.status(500).send({
-            message: err.message || "Some error occurred while retrieving users."
+            message: err.message || "Error occurred while retrieving users."
         });
     });
 }
@@ -625,7 +648,7 @@ exports.deleteuser = (req, res) => {
 		}
     }).catch(err => {
         res.status(500).send({
-            message: err.message || "Some error occurred while retrieving users."
+            message: err.message || "Error occurred while retrieving users."
         });
     });
 };
@@ -696,7 +719,7 @@ exports.uiLogin = (req, res) => {
 	})
 	.catch(err => {
 		res.status(500).send({
-            message: err.message || "Some error occurred while accessing DB."
+            message: err.message || "Error occurred while accessing DB."
         });
 	});
 }
@@ -768,7 +791,7 @@ exports.fpSendOtp = async(req, res) => {
 	})
 	.catch(err => {
 		res.status(500).send({
-            message: err.message || "Some error occurred while accessing DB."
+            message: err.message || "Error occurred while accessing DB."
         });
 	});
 }

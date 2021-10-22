@@ -25,6 +25,7 @@
 const Clients = require('../models/client.model.js');
 const Devices = require('../models/devreg.model.js');
 const validfn = require('../misc/validators.js');
+const fetch = require('node-fetch');
 
 const mongoose = require('mongoose');
 
@@ -244,7 +245,7 @@ exports.adeviceList = (req, res) => {
                 res.status(200).send(finlist);
             }).catch(err => {
                 res.status(500).send({
-                    message: err.message || "Some error occurred while retrieving Client info."
+                    message: err.message || "Error occurred while retrieving Client info."
                 });
             });
         }
@@ -254,7 +255,7 @@ exports.adeviceList = (req, res) => {
         }
     }).catch(err => {
         res.status(500).send({
-            message: err.message || "Some error occurred while retrieving devices."
+            message: err.message || "Error occurred while retrieving device info"
         });
     });
 }
@@ -268,6 +269,7 @@ exports.adeviceClient = (req, res) => {
             message: "mandatory field missing"
         });
     }
+
     var clientname = {"cname" : req.params.client};
     Clients.findOne(clientname)
     .then(function(data) {
@@ -397,7 +399,7 @@ exports.mfdeviceList = (req, res) => {
                             else
                             {
                                 res.status(400).send({
-                                    message: "No Devices under the site, pile and location!"
+                                    message: "No Devices under the client"
                                 });
                             }
                         })
@@ -526,14 +528,14 @@ exports.medit = (req, res) => {
                 })
                 .catch((err) => {
                     res.status(500).send({
-                        message: err.message || "Error occurred while updating the device in record!"
+                        message: err.message || "Error occurred while updating the device in record"
                     });
                 });
             }
             
             if(err_flg == true)
             {
-                throw new Error('New Client doesnt exists');
+                throw new Error("Client doesn't exists");
             }
             
             if(req.body.nhwid)
@@ -550,20 +552,20 @@ exports.medit = (req, res) => {
                 else
                 {
                     res.status(400).send({
-                        message: "Selected device not found in the record!"
+                        message: "Selected device not found in the record"
                     });
                 }  
             })
             .catch((err) => {
                 res.status(500).send({
-                    message: err.message || "Error occurred while updating the device in record!"
+                    message: err.message || "Error occurred while updating the device in record"
                 });
             });
         }
         else
         {
             res.status(400).send({
-                message: "Client not exists"
+                message: "Client doesn't exists"
             });
         }
     })
@@ -619,6 +621,103 @@ exports.mdelete = (req, res) => {
         }
     })
     .catch((err) => {
+        res.status(500).send({
+            message: err.message || "Error occurred while fetching the client info"
+        });
+    });
+}
+
+
+// Edit a device
+exports.getDevices = (req, res) => {
+    if(!req.params.client || !req.body.type) {
+
+        return res.status(400).send({
+            message: "mandatory field missing"
+        });
+    }
+
+    var clientname = {"cname" : req.params.client};
+    Clients.findOne(clientname)
+
+    .then(function(data) {
+        if(data)
+        {
+            var influxUrl = data.dbdata.url;
+	    var influxUser = data.dbdata.user;
+	    var influxPwd = data.dbdata.pwd;
+            var influxDbn = data.dbdata.dbname;
+            var influxMmn = data.dbdata.mmtname;
+            var cid = data.cid;
+            var type = req.body.type
+	
+	    var url = influxUrl + "/query?db="+influxDbn+"&q=SHOW Tag values with key="+req.body.type;
+	    var authPwd = influxUser + ":" + influxPwd;
+	    var b64Pwd = Buffer.from(authPwd).toString('base64');
+
+            console.log("Query: ",url)
+	
+	    const headers = {
+		"Authorization": "Basic " + b64Pwd
+	    }
+	
+	    fetch(url, {method:'GET', headers: headers,
+            })
+            .then(response => {
+                console.log("Return - 1")
+		return response.json();
+	    })
+            .then(json => {
+		var result = {};
+		var ifdbdevices = [];
+                var dncdevices = [];
+		getDbArrList = json.results[0].series[0].values;
+		
+		for (var i=0; i<getDbArrList.length; i++) 
+                {
+		    ifdbdevices [i] = getDbArrList[i][1];
+		}
+		
+                //Devices.find({"cid": cid, "rdate": ''})
+                Devices.find({"rdate": ''})
+                .then(data => {
+
+                    if(data)
+                    {
+                        var finlist = [];
+
+                        for(var i=0; i<data.length; i++)
+                        {
+                            dncdevices[i] = data[i][type]
+                        }
+                    }
+                    
+                    ifdbdevices=ifdbdevices.filter(x =>!dncdevices.includes(x))
+                    result.device_list = ifdbdevices;   
+                    console.log("Return - 200")           
+    		    return res.status(200).send(result);
+
+                });
+                
+	    })
+	    .catch(err => {
+                console.log("Return - 500 - 1")
+		return res.status(500).send({
+                    message: "Error fetching db names: " + err
+                });
+            });
+        }
+        else
+        {
+            console.log("Return - 400")
+            res.status(400).send({
+                message: "Client not exists"
+            });
+        }
+
+    })
+    .catch((err) => {
+        console.log("Return - 500 - 2")
         res.status(500).send({
             message: err.message || "Error occurred while fetching the client info"
         });

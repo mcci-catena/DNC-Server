@@ -1,3 +1,27 @@
+/*############################################################################
+# 
+# Module: server.js
+#
+# Description:
+#     DNC Server Module (Backend for DNC UI, DNC Endpoints)
+#
+# Copyright notice:
+#     This file copyright (c) 2021 by
+#
+#         MCCI Corporation
+#         3520 Krums Corners Road
+#         Ithaca, NY  14850
+#
+#     Released under the MCCI Corporation.
+#
+# Author:
+#     Seenivasan V, MCCI Corporation February 2021
+#
+# Revision history:
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#       Module created
+############################################################################*/
+
 const cors = require('cors');
 const express = require('express');
 const dbConfig = require('./config/dbconfig.js');
@@ -44,4 +68,3 @@ var server = app.listen(appconst.APP_PORT, function () {
   var port = server.address().port
   console.log(""+appconst.APP_NAME+" v"+appconst.APP_VERSION+" Listening http://%s:%s", host, port)
 });
-

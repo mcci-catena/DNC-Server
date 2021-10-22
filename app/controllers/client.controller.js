@@ -1,5 +1,30 @@
+/*############################################################################
+# 
+# Module: client.controller.js
+#
+# Description:
+#     Endpoint implementation for Client managememt
+#
+# Copyright notice:
+#     This file copyright (c) 2021 by
+#
+#         MCCI Corporation
+#         3520 Krums Corners Road
+#         Ithaca, NY  14850
+#
+#     Released under the MCCI Corporation.
+#
+# Author:
+#     Seenivasan V, MCCI Corporation February 2021
+#
+# Revision history:
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#       Module created
+############################################################################*/
+
 const Client = require('../models/client.model.js');
 const validfn = require('../misc/validators.js');
+const allctrl = require('../controllers/rmall.controller.js');
 const fetch = require('node-fetch');
 
 const mongoose = require('mongoose');
@@ -49,7 +74,7 @@ exports.create = (req, res) => {
         });
     }
     
-    const [resb, rest] = validfn.inputvalidation(req.body.cname)
+    const [resb, rest] = validfn.clientvalidation(req.body.cname)
 
     if(!Boolean(resb))
     {
@@ -101,7 +126,7 @@ exports.create = (req, res) => {
                         res.status(200).send(data);
                     }).catch(err => {
                         res.status(500).send({
-                            message: err.message || "Some error occurred while creating the Country."
+                            message: err.message || "Error occurred while creating the Client."
                         });
                     });      
                 }
@@ -127,12 +152,12 @@ exports.find_client = (req, res) => {
     }).catch(err => {
         if(err.kind === 'ObjectId') {
             return res.status(400).send({
-                message: "Client not found with ID: " + req.params.clientId
+                message: "Client not found with name: " + req.params.clientId
             });                
         }
         else{
             return res.status(500).send({
-                message: "Error retrieving note with id: " + req.params.clientId
+                message: "Error while retrieving the Client: " + req.params.clientId
             });
         }
     });
@@ -260,7 +285,7 @@ exports.fetch_mmt_names = (req, res) => {
 	var influxUrl = req.body.url;
 	var influxUser = req.body.user;
 	var influxPwd = req.body.pwd;
-    var influxDbn = req.body.dbn;
+        var influxDbn = req.body.dbn;
 	
 	var url = influxUrl + "/query?db="+influxDbn+"&q=SHOW MEASUREMENTS LIMIT 100";
 	var authPwd = influxUser + ":" + influxPwd;
@@ -328,6 +353,32 @@ exports.find_device_register_status = (req, res) => {
                 message: "Error verifying device status for client - " + req.params.clientId
             }); 
 	});
+};
+
+
+// Delete a client with the specified clientId in the request
+
+exports.delete = (req, res) => {
+    const filter = {"cname": {$regex: new RegExp(req.params.clientId, "ig")}}
+    Client.findOneAndRemove(filter, {useFindAndModify: false})
+   .then(data => {
+       if(!data) {
+           return res.status(400).send({
+               message: "Client not found with name " + req.params.clientId
+           });
+       }
+       allctrl.removeClient(data.cid);
+       res.status(200).send({message: "Client "+req.params.clientId+" deleted successfully!"});
+   }).catch(err => {
+       if(err.kind === 'ObjectId' || err.name === 'NotFound') {
+           return res.status(400).send({
+               message: "Client not found with name " + req.params.clientId
+           });                
+       }
+       return res.status(500).send({
+           message: "Could not delete client with name " + req.params.clientId
+       });
+   });
 };
 
 
