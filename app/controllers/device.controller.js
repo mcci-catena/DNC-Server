@@ -382,7 +382,7 @@ exports.showRmDevice = (req, res) => {
 
 
 exports.removeDevice = (req, res) => {
-    if(!req.params.cname || !req.body.hwid || !req.body.datatime) {
+    if(!req.params.cname || !req.body.hwid || !req.body.datetime) {
         return res.status(400).send({
             message: "mandatory field missing"
         });
