@@ -651,11 +651,11 @@ exports.getDevices = (req, res) => {
             var cid = data.cid;
             var type = req.body.type
 	
-	    var url = influxUrl + "/query?db="+influxDbn+"&q=SHOW Tag values with key="+req.body.type;
+	    var url = influxUrl + "/query?db="+influxDbn+"&q=SHOW Tag values from "+influxMmn+" with key="+req.body.type;
 	    var authPwd = influxUser + ":" + influxPwd;
 	    var b64Pwd = Buffer.from(authPwd).toString('base64');
 
-            console.log("Query: ",url)
+        //console.log("Query: ",url)
 	
 	    const headers = {
 		"Authorization": "Basic " + b64Pwd
@@ -664,7 +664,7 @@ exports.getDevices = (req, res) => {
 	    fetch(url, {method:'GET', headers: headers,
             })
             .then(response => {
-                console.log("Return - 1")
+                //console.log("Return - 1")
 		return response.json();
 	    })
             .then(json => {
@@ -694,14 +694,14 @@ exports.getDevices = (req, res) => {
                     
                     ifdbdevices=ifdbdevices.filter(x =>!dncdevices.includes(x))
                     result.device_list = ifdbdevices;   
-                    console.log("Return - 200")           
+                    //console.log("Return - 200")           
     		    return res.status(200).send(result);
 
                 });
                 
 	    })
 	    .catch(err => {
-                console.log("Return - 500 - 1")
+                //console.log("Return - 500 - 1")
 		return res.status(500).send({
                     message: "Error fetching db names: " + err
                 });
@@ -709,7 +709,7 @@ exports.getDevices = (req, res) => {
         }
         else
         {
-            console.log("Return - 400")
+            //console.log("Return - 400")
             res.status(400).send({
                 message: "Client not exists"
             });
@@ -717,7 +717,7 @@ exports.getDevices = (req, res) => {
 
     })
     .catch((err) => {
-        console.log("Return - 500 - 2")
+        //console.log("Return - 500 - 2")
         res.status(500).send({
             message: err.message || "Error occurred while fetching the client info"
         });
