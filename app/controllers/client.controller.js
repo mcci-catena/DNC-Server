@@ -212,7 +212,8 @@ exports.update = (req, res) => {
 			"url": req.body.url,
 			"user": req.body.user,
 		    "pwd": req.body.pwd,
-		    "dbname": req.body.dbname
+		    "dbname": req.body.dbname,
+            "mmtname": req.body.mmtname
 		},
 		"taglist": req.body.tlist
 		}
