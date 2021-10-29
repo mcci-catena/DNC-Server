@@ -1,3 +1,26 @@
+/*############################################################################
+# 
+# Module: dnc.listdevice.js
+#
+# Description:
+#     Endpoint implementation for providing list of devices from DNC record
+#
+# Copyright notice:
+#     This file copyright (c) 2021 by
+#
+#         MCCI Corporation
+#         3520 Krums Corners Road
+#         Ithaca, NY  14850
+#
+#     Released under the MCCI Corporation.
+#
+# Author:
+#     Seenivasan V, MCCI Corporation February 2021
+#
+# Revision history:
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#       Module created
+############################################################################*/
 
 const mongoose = require('mongoose');
 const Client = require('../models/client.model.js');
@@ -108,8 +131,6 @@ async function getTopMapping(clienid, devdict){
             devdict.devices[i].deviceid = data.deviceid
             devdict.devices[i].devID = data.devID
             devdict.devices[i].devEUI = data.devEUI
-            devdict.devices[i].mmname = data.mmname
-            devdict.devices[i].fdname = data.fdname
         }
         else
         {

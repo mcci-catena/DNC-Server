@@ -3,7 +3,7 @@
 # Module: auth.js
 #
 # Description:
-#     Authenticate the user
+#     JSON Web Token validation
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,7 +18,7 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V1.1.1 Wed Feb 17 2021 11:24:35 seenivasan
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
 #       Module created
 ############################################################################*/
 

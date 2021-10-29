@@ -1,3 +1,26 @@
+/*############################################################################
+# 
+# Module: validators.js
+#
+# Description:
+#     Input validators API (Date, Time, Email etc ...)
+#
+# Copyright notice:
+#     This file copyright (c) 2021 by
+#
+#         MCCI Corporation
+#         3520 Krums Corners Road
+#         Ithaca, NY  14850
+#
+#     Released under the MCCI Corporation.
+#
+# Author:
+#     Seenivasan V, MCCI Corporation February 2021
+#
+# Revision history:
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#       Module created
+############################################################################*/
 
 exports.validatetime = (inputTime) => {
 
@@ -88,6 +111,25 @@ exports.inputvalidation = (instring) => {
     }
     return [true, "OK"]
 }
+
+
+exports.clientvalidation = (instring) => {
+    if(!instring.charAt(0).match(/[a-zA-Z]/))
+    {
+        return [false, "should starts with alpha character!"]
+    }
+    if(instring.match("^[a-zA-Z0-9-_ ]*$") == null)
+    {
+        return [false, "should not contain symbols except '-' '_' "]
+    }
+
+    if(instring.length < 3)
+    {
+        return [false, "length should be minimum 3"]
+    }
+    return [true, "OK"]
+}
+
 
 
 exports.emailvalidation = (instring) => {

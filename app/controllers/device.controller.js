@@ -1,3 +1,27 @@
+/*############################################################################
+# 
+# Module: device.controller.js
+#
+# Description:
+#     Endpoint implementation for Device Configuration
+#
+# Copyright notice:
+#     This file copyright (c) 2021 by
+#
+#         MCCI Corporation
+#         3520 Krums Corners Road
+#         Ithaca, NY  14850
+#
+#     Released under the MCCI Corporation.
+#
+# Author:
+#     Seenivasan V, MCCI Corporation February 2021
+#
+# Revision history:
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#       Module created
+############################################################################*/
+
 const Clients = require('../models/client.model.js');
 const Devices = require('../models/devreg.model.js');
 const validfn = require('../misc/validators.js');
@@ -145,7 +169,7 @@ exports.create = (req, res) => {
                         else
                         {
                             return res.status(400).send({
-                                message: "A device is already assigned to this location, remove then add a device!!!"
+                                message: "A device is already assigned to this location, remove then add a device!"
                             });
                         }
                     })
@@ -158,7 +182,7 @@ exports.create = (req, res) => {
                 else
                 {
                     return res.status(400).send({
-                        message: "The Device is already assigned, try with different!!!"
+                        message: "The Device is already assigned, try with different!"
                     });
                 }
             })
@@ -232,6 +256,79 @@ exports.adevClient = (req, res) => {
     });
 }
 
+
+// Edit a device
+exports.medit = (req, res) => {
+    if(!req.params.client || !req.body.hwid || !req.body.newd) {
+
+        return res.status(400).send({
+            message: "mandatory field missing"
+        });
+    }
+
+    var otherd = {}
+    
+    if(req.body.otherd)
+    {
+        otherd = req.body.otherd
+    }
+    otherd["hwid"] = req.body.hwid
+    
+    var clientname = {"cname" : req.params.client};
+
+    Clients.findOne(clientname)
+    .then(async function(data) {
+        if(data)
+        {
+            var clientid = data.cid;
+            
+            let Cdev
+            try {
+                Cdev = mongoose.model('devices'+clientid)
+            }catch (error){
+                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
+            }
+
+            var filter = otherd
+            var update = req.body.newd
+
+            console.log("Filter: ", filter)
+            console.log("Update: ", update)
+
+            Cdev.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
+            .then(function(data) {
+                if(data)
+                {
+                    res.status(200).send(data);
+                }
+                else
+                {
+                    res.status(400).send({
+                        message: "Selected device not found in the record!"
+                    });
+                }  
+            })
+            .catch((err) => {
+                res.status(500).send({
+                    message: err.message || "Error occurred while updating the device in record!"
+                });
+            });
+        }
+        else
+        {
+            res.status(400).send({
+                message: "Client is not found!"
+            });
+        }
+    })
+    .catch((err) => {
+        res.status(500).send({
+            message: err.message || "Error occurred while fetching the client info"
+        });
+    });
+}
+
+
 exports.showRmDevice = (req, res) => {
     if(!req.params.client) {
         return res.status(400).send({
@@ -285,7 +382,7 @@ exports.showRmDevice = (req, res) => {
 
 
 exports.removeDevice = (req, res) => {
-    if(!req.params.cname && !req.body.hwid && !req.body.datatime) {
+    if(!req.params.cname || !req.body.hwid || !req.body.datetime) {
         return res.status(400).send({
             message: "mandatory field missing"
         });
@@ -575,7 +672,7 @@ exports.replaceDevice = (req, res) => {
             })
             .catch(err => {
                 res.status(500).send({
-                    message: "Error occurred while finding the device info."
+                    message: "Error occurred while fetching the device info."
                 });
             });
         }
@@ -631,7 +728,7 @@ exports.delete = (req, res) => {
                 if(!data)
                 {
                     return res.status(400).send({
-                        message: "Device not found with the given details "
+                        message: "Device not found with the given details"
                     });
                 }
                 res.send({message: "Device "+req.body.hwid+" deleted successfully!"});
@@ -651,7 +748,7 @@ exports.delete = (req, res) => {
     })
     .catch((err) => {
         res.status(500).send({
-            message: err.message || "Error occurred while fetching the client."
+            message: err.message || "Error occurred while fetching the client info"
         });
     });
 };

@@ -1,5 +1,30 @@
+/*############################################################################
+# 
+# Module: client.controller.js
+#
+# Description:
+#     Endpoint implementation for Client managememt
+#
+# Copyright notice:
+#     This file copyright (c) 2021 by
+#
+#         MCCI Corporation
+#         3520 Krums Corners Road
+#         Ithaca, NY  14850
+#
+#     Released under the MCCI Corporation.
+#
+# Author:
+#     Seenivasan V, MCCI Corporation February 2021
+#
+# Revision history:
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#       Module created
+############################################################################*/
+
 const Client = require('../models/client.model.js');
 const validfn = require('../misc/validators.js');
+const allctrl = require('../controllers/rmall.controller.js');
 const fetch = require('node-fetch');
 
 const mongoose = require('mongoose');
@@ -49,14 +74,15 @@ exports.create = (req, res) => {
         });
     }
     
-    const [resb, rest] = validfn.inputvalidation(req.body.cname)
+    const [resb, rest] = validfn.clientvalidation(req.body.cname)
 
     if(!Boolean(resb))
     {
         return res.status(400).send({message: "Client name "+rest}); 
     }
 	
-	if(!req.body.url || !req.body.user || !req.body.pwd || !req.body.dbname || !req.body.tlist)
+	if(!req.body.url || !req.body.user || !req.body.pwd || !req.body.dbname 
+        || !req.body.mmtname || !req.body.tlist)
     {
         return res.status(400).send({message: "Field can't be empty"})
     }
@@ -86,6 +112,7 @@ exports.create = (req, res) => {
                     dbdata["user"] = req.body.user
                     dbdata["pwd"] = req.body.pwd
                     dbdata["dbname"] = req.body.dbname
+                    dbdata["mmtname"] = req.body.mmtname
 
                     cdict = {}
                     cdict["cname"] = req.body.cname
@@ -99,7 +126,7 @@ exports.create = (req, res) => {
                         res.status(200).send(data);
                     }).catch(err => {
                         res.status(500).send({
-                            message: err.message || "Some error occurred while creating the Country."
+                            message: err.message || "Error occurred while creating the Client."
                         });
                     });      
                 }
@@ -125,12 +152,12 @@ exports.find_client = (req, res) => {
     }).catch(err => {
         if(err.kind === 'ObjectId') {
             return res.status(400).send({
-                message: "Client not found with ID: " + req.params.clientId
+                message: "Client not found with name: " + req.params.clientId
             });                
         }
         else{
             return res.status(500).send({
-                message: "Error retrieving note with id: " + req.params.clientId
+                message: "Error while retrieving the Client: " + req.params.clientId
             });
         }
     });
@@ -254,6 +281,46 @@ exports.fetch_db_names = (req, res) => {
 }
 
 
+exports.fetch_mmt_names = (req, res) => {
+	var influxUrl = req.body.url;
+	var influxUser = req.body.user;
+	var influxPwd = req.body.pwd;
+        var influxDbn = req.body.dbn;
+	
+	var url = influxUrl + "/query?db="+influxDbn+"&q=SHOW MEASUREMENTS LIMIT 100";
+	var authPwd = influxUser + ":" + influxPwd;
+	var b64Pwd = Buffer.from(authPwd).toString('base64');
+	
+	const headers = {
+		"Authorization": "Basic " + b64Pwd
+	}
+	
+	fetch(url, {method:'GET',
+        headers: headers,
+       })
+    .then(response => {
+		return response.json();
+	})
+    .then(json => {
+		var result = {};
+		var mmtNames = [];
+		getDbArrList = json.results[0].series[0].values;
+		
+		for (var i=0; i<getDbArrList.length; i++) {
+			mmtNames[i] = getDbArrList[i][0];
+		}
+		
+		result.mmt_list = mmtNames;
+		
+		return res.status(200).send(result);
+	})
+	.catch(err => {
+		return res.status(500).send({
+            message: "Error fetching db names: " + err
+        });
+	});
+}
+
 exports.find_device_register_status = (req, res) => {
 	var clientDevice = "devices" + String(req.params.clientId);
 	
@@ -286,6 +353,32 @@ exports.find_device_register_status = (req, res) => {
                 message: "Error verifying device status for client - " + req.params.clientId
             }); 
 	});
+};
+
+
+// Delete a client with the specified clientId in the request
+
+exports.delete = (req, res) => {
+    const filter = {"cname": {$regex: new RegExp(req.params.clientId, "ig")}}
+    Client.findOneAndRemove(filter, {useFindAndModify: false})
+   .then(data => {
+       if(!data) {
+           return res.status(400).send({
+               message: "Client not found with name " + req.params.clientId
+           });
+       }
+       allctrl.removeClient(data.cid);
+       res.status(200).send({message: "Client "+req.params.clientId+" deleted successfully!"});
+   }).catch(err => {
+       if(err.kind === 'ObjectId' || err.name === 'NotFound') {
+           return res.status(400).send({
+               message: "Client not found with name " + req.params.clientId
+           });                
+       }
+       return res.status(500).send({
+           message: "Could not delete client with name " + req.params.clientId
+       });
+   });
 };
 
 

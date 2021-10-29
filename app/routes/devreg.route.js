@@ -3,7 +3,7 @@
 # Module: devreg.route.js
 #
 # Description:
-#     Route for Manage Device Registry API
+#     Route for Manage User API
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,7 +18,7 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V1.1.1 Wed Feb 17 2021 11:24:35 seenivasan
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
 #       Module created
 ############################################################################*/
 
@@ -50,5 +50,9 @@ module.exports = (app) => {
     // Delete a device Hardware/device under a client which are not assigned to a sit/location
     // app.delete('/regdev/:client', tokenfn.authenticateJWT, devctrl.mdelete);
     app.delete('/regdev/:client', tokenfn.authenticateJWT, devctrl.mdelete);
+
+
+    // Get list of devices from InfluxDB
+    app.post('/getdev/:client', tokenfn.authenticateJWT, devctrl.getDevices);
 
 }

@@ -1,9 +1,9 @@
 /*############################################################################
 # 
-# Module:version.js
+# Module: grafana.route.js
 #
 # Description:
-#     Version Endpoint
+#     Route for Grafana Query handling (Not used, may required for future use)
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -22,10 +22,10 @@
 #       Module created
 ############################################################################*/
 
-const appconst = require('./misc/constants.js');
+const grafctrl = require('../controllers/grafana.controller.js');
 
-module.exports = function (app) {
-    app.get('/version', function(req, res) {
-        res.status(200).json(""+appconst.APP_NAME+" v"+appconst.APP_VERSION);
-    });
+module.exports = (app) => {
+
+    // Create a new Note
+    app.post('/query', grafctrl.gquery);
 }

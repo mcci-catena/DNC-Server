@@ -3,7 +3,7 @@
 # Module: devreg.model.js
 #
 # Description:
-#     Model schema for Device Registry collection
+#     DB Schema for Device Registry Collection
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,7 +18,7 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V1.1.2 Wed Feb 23 2021 11:24:35 seenivasan
+#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
 #       Module created
 ############################################################################*/
 
@@ -30,8 +30,6 @@ const NoteSchema = mongoose.Schema({
     deviceid: String,
     devID: String,
     devEUI: String,
-    mmname: String,
-    fdname: String,
     idate: Date,
     rdate: Date
 }, {
