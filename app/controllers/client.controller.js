@@ -166,25 +166,61 @@ exports.find_client = (req, res) => {
 
 // Retrieve and return all Clients.
 exports.find_clients = (req, res) => {
-    Client.estimatedDocumentCount()
+    Users.find({"uname": req.user.user})
     .then(data => {
-        if(data > 0) {
-            Client.find()
-            .then(data => {
-                return res.status(200).send(data);
-            })
-            .catch(err => {
-                return res.status(400).send({message: err.message || "Error occurred while retrieving clients."});
-            });
+        if(data.length > 0) {
+			//res.status(200).send({message: data[0].uname});
+            if(data[0].level == 2)
+            {
+                Client.find()
+                .then(data => {
+                    return res.status(200).send(data);
+                })
+                .catch(err => {
+                    return res.status(400).send({message: err.message || "Error occurred while retrieving clients."});
+                });
+            }
+            else
+            {
+                var filter = {"cid": data[0].cid};
+                Client.findOne(filter)
+                .then(data => {
+                    if(!data) {
+                        return res.status(400).send({
+                            message: "Client not found with name " + req.params.clientId
+                        });            
+                    }
+                    else{
+                        datan = []
+                        datan.push(data)
+                        res.status(200).send(datan);   
+                    }
+                }).catch(err => {
+                    if(err.kind === 'ObjectId') {
+                        return res.status(400).send({
+                            message: "Client not found with name: " + req.params.clientId
+                        });                
+                    }
+                    else{
+                        return res.status(500).send({
+                            message: "Error while retrieving the Client: " + req.params.clientId
+                        });
+                    }
+                });
+    
+            }
+		}
+        else
+        {
+            res.status(400).send({message: "Invalid User"});
         }
-        else {
-            return res.status(400).send({message: "client information doesn't exist"});
-        }
+		
     })
     .catch(err => {
-        return res.status(400).send({message: err.message || "Error occurred while retrieving clients."});
-    });
-};
+		res.status(500).send({message: "Error occured while accessing DB"});
+	});
+	
+}
 
 
 // Update a user identified by the userId in the request
