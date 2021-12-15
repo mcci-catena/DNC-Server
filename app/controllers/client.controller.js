@@ -21,7 +21,7 @@
 #     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
 #       Module created
 ############################################################################*/
-
+const Users = require('../models/user.model.js');
 const Client = require('../models/client.model.js');
 const validfn = require('../misc/validators.js');
 const allctrl = require('../controllers/rmall.controller.js');
