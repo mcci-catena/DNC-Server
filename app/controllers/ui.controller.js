@@ -122,27 +122,55 @@ function addAdminUserInfo(clientId, req, res) {
 function addUserInfo(clientId, req, res) {
 	this.salt = crypto.randomBytes(8).toString('hex')
     this.hash = crypto.pbkdf2Sync(req.body.pwd, this.salt,1000, 64, `sha512`).toString(`hex`); 
-	
-	const user = new Users({
-        cid: clientId,
-        uname: req.body.uname,
-        psalt: this.salt,
-        phash: this.hash,
-        email: req.body.email,
-        level: "1",
-        obsolete: false
-    });
-	
-	user.save()
-    .then(data => {
-		     res.status(200).send("User signed up successfully");
-        })
-    .catch(err => {
-            res.status(500).send({
-                message: err.message || "User signup failed!"
+
+    Users.find({$and:[{$or: [{"uname": req.body.uname}, {"email": req.body.email}]},{obsolete: {$eq: true}}]})
+	.then(data => {
+        if(data.length > 0)
+        {
+            const filter = {"email": req.body.email, "obsolete": true}
+            const update = {"cid": clientId, "uname": req.body.uname, "psalt":this.salt, "phash": this.hash, "obsolete": false}
+            Users.findOneAndUpdate(filter, update, {new: true})
+            .then(data => {
+                if(data)
+                {
+                    res.status(200).send("User signed up successfully");
+                }
+                else{
+                    res.status(200).send("User sign up failed, contact admin");
+                }
+            })
+            .catch(err => {
+                res.status(500).send({
+                    message: err.message || "Some error occurred while adding user"
+                });
+            })
+        }
+        else
+        {
+            const user = new Users({
+                cid: clientId,
+                uname: req.body.uname,
+                psalt: this.salt,
+                phash: this.hash,
+                email: req.body.email,
+                level: "1",
+                obsolete: false
             });
-        });	
-	
+            
+            user.save()
+            .then(data => {
+                     res.status(200).send("User signed up successfully");
+            })
+            .catch(err => {
+                res.status(500).send({
+                    message: err.message || "User signup failed!"
+                });
+            });
+        }
+    })
+	.catch(err => {
+		res.status(500).send({message: "Error occured while accessing DB"});
+	})
 }
 
 // update pwd
@@ -518,7 +546,8 @@ exports.usignup = (req, res) => {
     }
 	
 	// email verify in user table
-	Users.find({ $or: [{"uname": req.body.uname}, {"email": req.body.email}]})
+	//Users.find({ $or: [{"uname": req.body.uname}, {"email": req.body.email}]})
+	Users.find({$and:[{$or: [{"uname": req.body.uname}, {"email": req.body.email}]},{obsolete: {$eq: false}}]})
 	.then(data => {
 		if(data.length > 0) {
 			res.status(400).send({message: "User already exists"});
