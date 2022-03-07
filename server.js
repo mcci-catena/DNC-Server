@@ -43,6 +43,7 @@ require('./app/routes/device.route.js')(app);
 require('./app/routes/dnc.route.js')(app);
 require('./app/routes/ui.route.js')(app);
 require('./app/routes/devreg.route.js')(app);
+require('./app/routes/brix.route.js')(app);
 
 require('./app/version.js')(app);
 

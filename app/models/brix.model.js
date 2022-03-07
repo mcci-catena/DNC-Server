@@ -1,9 +1,9 @@
 /*############################################################################
 # 
-# Module: constants.js
+# Module: brix.model.js
 #
 # Description:
-#     Constants definition
+#     Route for Cornell Sap Endpoints (To add Sugar(Brix) value manually)
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -15,16 +15,21 @@
 #     Released under the MCCI Corporation.
 #
 # Author:
-#     Seenivasan V, MCCI Corporation February 2021
+#     Seenivasan V, MCCI Corporation February 2022
 #
 # Revision history:
-#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#     V1.0.x Thu Feb 24 2022 17:45:35 seenivasan
 #       Module created
 ############################################################################*/
+const mongoose = require('mongoose');
 
-module.exports = Object.freeze({
-    APP_NAME: 'Generic DNC API Server',
-    APP_VERSION: '1.0.2-1',
-	KEY_SECRET: 'mccigdnc2021',
-    APP_PORT: 8891
+const NoteSchema = mongoose.Schema({
+    Arnot: String,
+    Uihlein: String,
+    UVM: String,
+    rdate: Date
+}, {
+    timestamps: true
 });
+
+module.exports = mongoose.model('Brixes', NoteSchema);
