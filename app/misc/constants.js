@@ -24,7 +24,7 @@
 
 module.exports = Object.freeze({
     APP_NAME: 'Generic DNC API Server',
-    APP_VERSION: '1.0.2-1n',
+    APP_VERSION: '1.1.0',
 	KEY_SECRET: 'mccigdnc2021',
     APP_PORT: 8891
 });
