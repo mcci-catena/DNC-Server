@@ -33,6 +33,9 @@ const constants = require('../misc/constants');
 const validfn = require('../misc/validators.js');
 
 const mongoose = require('mongoose');
+//mongoose.set('useCreateIndex', true);
+mongoose.set('useFindAndModify', false); 
+
 const e = require('express');
 
 var crypto = require('crypto'); 
@@ -347,7 +350,8 @@ exports.updtaeorg = (req, res) => {
             else
             {
                 var update = {"email": req.body.aemail, "org": req.body.aorg}
-                Config.findOneAndUpdate(update, {useFindAndModify: false, new: true})
+                //Config.findOneAndUpdate(update, {useFindAndModify: false, new: true})
+                Config.findOneAndUpdate(update)
                 .then(function(data){
                     if(data)
                     {

@@ -30,6 +30,8 @@ const Devices = require('../models/devreg.model.js');
 //function getDeviceList(countryid, dncq, dnckey)
 exports.getDeviceList = (req, res) => {
 
+    console.log("DNC Server: Get device list")
+
     //var cfilter = {"dbdata.user": req.body.dncd.influxd.uname, "dbdata.pwd": req.body.dncd.influxd.pwd, "dbdata.dbname": req.body.dncd.influxd.dbname}
     var cfilter = {"cname": req.body.dncd.influxd.uname}
 
@@ -44,20 +46,45 @@ exports.getDeviceList = (req, res) => {
             fmdate = req.body.dncd.fdate
             todate = req.body.dncd.tdate
 
-            var timef = {$or:[{"idate": {$gte: fmdate, $lte: todate}},
-                              {"rdate": {$gte: fmdate, $lte: todate}},
-                              {"idate":{$lte: fmdate},"rdate": null}]}
-            var totf = []
-            totf.push(req.body.dncd.dnckey)
-            totf.push(timef)
-    
+            
             var filter = {}
-            filter["$and"] = totf
+
+            //console.log(req.body.dncd.dnckey)
+            //console.log(Object.keys(req.body.dncd.dnckey).length)
+            //console.log(Object.keys(req.body.dncd).includes("dnckey"))
+
+
+            if(Object.keys(req.body.dncd).includes("dnckey"))
+            {
+                //console.log("DNCS - DNC Tags selected")
+                var totf = []
+                var timef = {$or:[{"idate": {$gte: fmdate, $lte: todate}},
+                {"rdate": {$gte: fmdate, $lte: todate}},
+                {"idate":{$lte: fmdate},"rdate": null}]}
+
+                totf.push(req.body.dncd.dnckey)
+                totf.push(timef)
+
+                filter["$and"] = totf
+            }
+            else
+            {
+                console.log("DNCS - No DNC Tags selected")
+                var timef = [{"idate": {$gte: fmdate, $lte: todate}},
+                {"rdate": {$gte: fmdate, $lte: todate}},
+                {"idate":{$lte: fmdate},"rdate": null}]
+
+                filter["$or"] = timef
+            }
+
+           
             var findict = {}
 
             findict['dbdata'] = data.dbdata
             
             taglist = data.taglist
+
+            //console.log("DNC Server: ", filter)
 
             Cdev.find(filter).sort({"idate": 1})
             .then(async function(data) {
@@ -88,6 +115,8 @@ exports.getDeviceList = (req, res) => {
                     findict['devices'] = devarray;
                     findict['taglist'] = taglist
                     resdict = await getTopMapping(clientid, findict)
+
+                    //console.log("DNCS - Resp rcvd: ", resdict)
     
                     res.status(200).send({
                         resdict
@@ -95,12 +124,14 @@ exports.getDeviceList = (req, res) => {
                 }
                 else
                 {
+                    console.log("DNCS - Resp rcvd: No devices")
                     res.status(201).send({
                         message: "Data Read Error"
                     });
                 }
             })
             .catch(err => {
+                console.log("DNCS - Resp DB Read Error")
                 res.status(201).send({
                     message: "Data Read Error"
                 });
@@ -120,6 +151,11 @@ exports.getDeviceList = (req, res) => {
     });
 }
 
+
+
+// Get InfluxDB device tag ID from Device Registry
+// Input - Client ID, HW ID, device install date and device remove date
+// Output - deviceID/ devID/ devEUI
 
 async function getTopMapping(clienid, devdict){
     var len = devdict.devices.length;
@@ -141,6 +177,9 @@ async function getTopMapping(clienid, devdict){
 }
 
 
+// Get InfluxDB device tag ID from Device Registry
+// Input - Client ID, HW ID, device install date and device remove date
+// Output - deviceID/ devID/ devEUI
 
 function GetDeviceID(clientid, devdict)
 {
