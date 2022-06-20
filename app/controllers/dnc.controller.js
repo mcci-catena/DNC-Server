@@ -26,6 +26,9 @@ const mongoose = require('mongoose');
 const Client = require('../models/client.model.js');
 const Users = require('../models/user.model.js');
 
+const USER = 1;
+const ADMIN = 2;
+
 var crypto = require('crypto'); 
 
 exports.alogin = (req, res) => {
@@ -69,9 +72,15 @@ exports.pluginLogin = (req, res) => {
 
                 if(this.hash == dbhash)
                 {
-                    return res.status(200).send({
-                        message: "Success"
-                    });
+                    if(level == ADMIN)
+                    {
+                       getClientList(req, res);
+                    }
+                    else
+                    if(level == USER)
+                    {
+                       getClient(clientid, req, res);
+                    }
                }
                else
                {
@@ -252,6 +261,64 @@ function getDNCTagValues(data1, tagname, filtdict)
     });
 }
 
+function getClientList(req, res){
+    Client.find()
+    .then(function(data){
+        if(data)
+        {
+            var clients = [];
+            var results = {};
+            for(var i=0; i<data.length; i++)
+            {
+                clients.push(data[i].cname);
+            }
+            results["clients"] = clients;
+            res.status(200).send({
+                results
+            });
+        }
+        else
+        {
+            res.status(401).send({
+                message: "Couldn't find clients"
+            });
+        }
+    })
+    .catch((err) => {
+        res.status(500).send({
+            message: err.message || "Error occurred while fetching the client info"
+        });
+    });
+}
+
+function getClient(cid, req, res) {
+    var filter = {"cid": cid}
+    Client.findOne(filter)
+    .then(function(data){
+        if(data)
+        {
+            var clients = [];
+            var results = {};
+            
+            clients.push(data.cname);
+            results["clients"] = clients;
+            res.status(200).send({
+                results
+            });
+        }
+        else
+        {
+            res.status(401).send({
+                message: "Invalid Client ID!"
+            });
+        }
+    })
+    .catch((err) => {
+        res.status(500).send({
+            message: err.message || "Error occurred while fetching the client info"
+        });
+    });
+}
 
 function extractTags(inq)
 {
