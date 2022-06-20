@@ -27,6 +27,7 @@ const Client = require('../models/client.model.js');
 const Users = require('../models/user.model.js');
 
 const readdb = require('./influx.js');
+const dschema = require('./dnc.schema.js');
 
 const USER = 1;
 const ADMIN = 2;
@@ -268,6 +269,54 @@ exports.getFields = (req, res) => {
                          error: "Field data not available"
                     });
                 }
+            }
+            else
+            {
+                return res.status(400).send({
+                  message: "Client not found"
+               });
+            }
+     })
+     .catch((err) => {
+        console.log("Client Read Error", err)
+     })
+};
+
+
+exports.getDevices = (req, res) => {
+    var filter = {"cname": req.body.cname}
+    Client.findOne(filter)
+    .then(async function(data) {
+            if(data)
+            {
+                taglist = data.taglist
+                Cdev = dschema.getDevSchema(data)
+                Cdev.find()
+                .then(function(data){
+                    var devarray = [];
+                    for(var i=0; i<data.length; i++)
+                    {
+                        darray = []
+                        for(k=0; k<taglist.length;  k++)
+                        {
+                            darray.push(data[i][taglist[k]])
+                        }
+
+                        darray.push(data[i]["hwid"])
+                        
+                        devarray.push(darray);
+
+                    }
+                    let findict = {}
+                    findict['devices'] = devarray;
+                    findict['taglist'] = taglist
+                    res.status(200).send(findict);
+                })
+                .catch(err => {
+                    res.status(201).send({
+                        message: "Data Read Error"
+                    });
+                })
             }
             else
             {
