@@ -32,4 +32,5 @@ module.exports = (app) => {
     app.post('/dlist', devctrl.getDeviceList);
     app.post('/gfields', dncctrl.getFields);
     app.post('/gdevices', dncctrl.getDevices);
+    app.post('/gdevmap', devctrl.getDevMaps);
 }

@@ -32,7 +32,6 @@ exports.getDeviceList = (req, res) => {
 
     console.log("DNC Server: Get device list")
 
-    //var cfilter = {"dbdata.user": req.body.dncd.influxd.uname, "dbdata.pwd": req.body.dncd.influxd.pwd, "dbdata.dbname": req.body.dncd.influxd.dbname}
     var cfilter = {"cname": req.body.dncd.influxd.uname}
 
     Client.findOne(cfilter)
@@ -49,14 +48,8 @@ exports.getDeviceList = (req, res) => {
             
             var filter = {}
 
-            //console.log(req.body.dncd.dnckey)
-            //console.log(Object.keys(req.body.dncd.dnckey).length)
-            //console.log(Object.keys(req.body.dncd).includes("dnckey"))
-
-
             if(Object.keys(req.body.dncd).includes("dnckey"))
             {
-                //console.log("DNCS - DNC Tags selected")
                 var totf = []
                 var timef = {$or:[{"idate": {$gte: fmdate, $lte: todate}},
                 {"rdate": {$gte: fmdate, $lte: todate}},
@@ -83,8 +76,6 @@ exports.getDeviceList = (req, res) => {
             findict['dbdata'] = data.dbdata
             
             taglist = data.taglist
-
-            //console.log("DNC Server: ", filter)
 
             Cdev.find(filter).sort({"idate": 1})
             .then(async function(data) {
@@ -116,8 +107,6 @@ exports.getDeviceList = (req, res) => {
                     findict['taglist'] = taglist
                     resdict = await getTopMapping(clientid, findict)
 
-                    //console.log("DNCS - Resp rcvd: ", resdict)
-    
                     res.status(200).send({
                         resdict
                     });
@@ -198,4 +187,86 @@ function GetDeviceID(clientid, devdict)
            }
         });
     });
+}
+
+function GetdevEUIdevID(cid, hwid)
+{
+    return new Promise(function(resolve, reject) {
+
+       var filter = {"cid": cid, "hwid": hwid}
+       Devices.findOne(filter ,function(err, data){
+           if(err)
+           {
+               data = []
+               reject(data);
+           }
+           else
+           {
+               resolve(data)
+           }
+        });
+    });
+}
+
+exports.getDevMaps = (req, res) => {
+    var filter = {"cname": req.body.cname}
+    var dbname, measname;
+    Client.findOne(filter)
+    .then(async function(data) {
+        if(data)
+        {
+            let cid = data.cid
+            taglist = data.taglist
+            dbname = data.dbdata.dbname
+            measname = data.dbdata.mmtname
+            const tagv = req.body.tagval.split(",")
+            const tagval = []
+            for(let i=0; i<tagv.length; i++){
+                tagval.push(tagv[i].trim())
+            }
+
+            dncdict = {}
+            
+            for(let i=0; i<taglist.length; i++){
+                dncdict[taglist[i]] = tagval[i]
+            }
+
+            Cdev = dschema.getDevSchema(data)
+            Cdev.find(dncdict)
+            .then(async function(data){
+                var devarray = [];
+                for(var i=0; i<data.length; i++)
+                {
+                    devdict = {}
+                    devdata = await GetdevEUIdevID(cid, data[i]["hwid"])
+                    if(devdata){
+                        devdict["devEUI"] = devdata.devEUI
+                        devdict["devID"] = devdata.devID
+                        devdict["deviceid"] = devdata.deviceid
+                    }
+                    devarray.push(devdict)
+                }
+                let findict = {}
+                findict['devices'] = devarray;
+                findict['dbname'] = dbname;
+                findict['measname'] = measname;
+
+                res.status(200).send(findict);
+            })
+            .catch(err => {
+                res.status(201).send({
+                    message: "Data Read Error"
+                });
+            })
+        }
+        else
+        {
+            return res.status(400).send({
+              message: "Client not found"
+           });
+        }
+    })
+    .catch((err) => {
+        console.log("Client Read Error", err)
+    })
 }
