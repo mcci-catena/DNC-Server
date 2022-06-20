@@ -26,6 +26,8 @@ const mongoose = require('mongoose');
 const Client = require('../models/client.model.js');
 const Users = require('../models/user.model.js');
 
+const readdb = require('./influx.js');
+
 const USER = 1;
 const ADMIN = 2;
 
@@ -203,6 +205,81 @@ exports.readtagval = (req, res) => {
         });
     });
 }
+
+exports.getFields = (req, res) => {
+    var filter = {"cname": req.body.cname}
+    Client.findOne(filter)
+    .then(async function(data) {
+            if(data)
+            {
+                let dbdata = data.dbdata
+                var indict = {}
+                indict["server"] = dbdata.url
+                indict["db"] = dbdata.dbname
+                indict["user"] = dbdata.user
+                indict["pwd"] = dbdata.pwd
+                indict["qry"] = "show field keys from "+dbdata.mmtname
+
+                try{
+                    influxdata = await readdb.readInflux(indict)
+             
+                    if(influxdata != 'error')
+                    {
+                        try{
+                            if(influxdata.hasOwnProperty("results"))
+                            {
+                                resobj = influxdata.results[0];
+                                if(resobj.hasOwnProperty("series"))
+                                {
+                                    var finarray = []
+                                    var farray =  resobj.series[0].values
+                                    for(i=0; i<farray.length; i++)
+                                    {
+                                        finarray.push(farray[i][0])
+                                    }   
+                                    var resdict = {};
+                                    resdict["fields"] = finarray
+                                    res.status(200).send(resdict);
+                                }
+                                else
+                                {
+                                    return res.status(400).send({
+                                        error: "Series not found in response"
+                                    });
+                                }
+                            }
+                            else
+                            {
+                                return res.status(400).send({
+                                    error: "Results not found in response"
+                                });
+                            }
+                        }
+                        catch(err)
+                        {
+                            return res.status(400).send({
+                                error: "Error in reading Fields"
+                            });
+                        }
+                    }
+             
+                }catch(err){
+                    return res.status(400).send({
+                         error: "Field data not available"
+                    });
+                }
+            }
+            else
+            {
+                return res.status(400).send({
+                  message: "Client not found"
+               });
+            }
+     })
+     .catch((err) => {
+        console.log("Client Read Error", err)
+     })
+};
 
 
 function getDevSchema(data)

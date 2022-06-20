@@ -30,4 +30,5 @@ module.exports = (app) => {
     app.post('/alogin', dncctrl.alogin);
     app.post('/plogin', dncctrl.pluginLogin);
     app.post('/dlist', devctrl.getDeviceList);
+    app.post('/gfields', dncctrl.getFields);
 }
