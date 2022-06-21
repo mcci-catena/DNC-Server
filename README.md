@@ -3,6 +3,15 @@ Generic DNC is a logical data Server, designed to provide location based data me
 
 ## Release History
 
+- v1.2.0 has the following changes:
+  - Update Login response
+  - New endpoint for getting field tags of a client
+  - New endpoint for getting device list with Tags
+  - New endpoint for getting device map
+
+- v1.1.0 has the following changes:
+  - DNC DB auto initialization
+
 - v1.0.1 has the following changes:
   - Fix [#4](https://gitlab-x.mcci.com/client/milkweed/mcgraw/dnc/dnc-server/-/issues/4): Response updated based on the user requests.
   - Fix [#2](https://gitlab-x.mcci.com/client/milkweed/mcgraw/dnc/dnc-server/-/issues/2): Issue fixed.
