@@ -210,15 +210,13 @@ function GetdevEUIdevID(cid, hwid)
 
 exports.getDevMaps = (req, res) => {
     var filter = {"cname": req.body.cname}
-    var dbname, measname;
     Client.findOne(filter)
     .then(async function(data) {
         if(data)
         {
             let cid = data.cid
             taglist = data.taglist
-            dbname = data.dbdata.dbname
-            measname = data.dbdata.mmtname
+            dbdata = data.dbdata
             const tagv = req.body.tagval.split(",")
             const tagval = []
             for(let i=0; i<tagv.length; i++){
@@ -248,8 +246,7 @@ exports.getDevMaps = (req, res) => {
                 }
                 let findict = {}
                 findict['devices'] = devarray;
-                findict['dbname'] = dbname;
-                findict['measname'] = measname;
+                findict['dbdata'] = dbdata;
 
                 res.status(200).send(findict);
             })
