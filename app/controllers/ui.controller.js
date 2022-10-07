@@ -26,20 +26,24 @@ const Config = require('../models/config.model.js');
 const Users = require('../models/user.model.js');
 const Clients = require('../models/client.model.js');
 const emotps = require('../models/emotp.model.js');
+const Invites = require('../models/invitelog.model.js')
 
 const jwt = require('jsonwebtoken');
 const constants = require('../misc/constants');
 
 const validfn = require('../misc/validators.js');
+const emailer = require('../misc/email')
+const htmlbody = require('../misc/htmldata')
 
 const mongoose = require('mongoose');
-//mongoose.set('useCreateIndex', true);
 mongoose.set('useFindAndModify', false); 
 
 const e = require('express');
 
 var crypto = require('crypto'); 
 var nodemailer = require('nodemailer');
+
+const otpmail = require('../misc/email')
 
 /* Utility functions */
 
@@ -51,38 +55,22 @@ function generateRandom()
    return a = a.substring(0, 6);
 }
 
-// To send OTP mail
-function sendEmail(otpNum, req, res)
-{
-    var transporter = nodemailer.createTransport({
-        host: 'postfix',
-        port: 25,
-		secure: false,
-        tls: {rejectUnauthorized: false},
-    });
+function updateInviteLog(indict){
+    // Update Invite record
+    console.log("Going to update Invite Record: ", indict)
 
-    var mailOptions = {
-        from: 'no-reply@mcci.com',
-        to: req.body.email,
-        subject: 'Test mail from DNC Server',
-        text: 'Your OTP from DNC is '+ otpNum
-    };
+    const filter = {$and:[{"cname": indict.cname},{"email": indict.email}]}
+    const update = {"isUsed": true};
+    Invites.findOneAndUpdate(filter, update, { new: true })
+    .then(data=>{
+        console.log("Invite update success: ", data)
+    })
+    .catch(err=>{
+        console.log("Error while update Invitation: ", err)
+    })
     
-	try{
-		transporter.sendMail(mailOptions, function(err, data) {
-            if(err) {
-                console.log(err);
-            } else {
-                console.log('Email sent successfully');
-			}
-        });
-		return true;
-	}
-	catch(err) {
-		return res.status(400).send({message: "Send OTP failed"}); 
-	}
-	
 }
+
 
 // save admin user
 function addAdminUserInfo(clientId, req, res) {
@@ -96,11 +84,11 @@ function addAdminUserInfo(clientId, req, res) {
         phash: this.hash,
         email: req.body.email,
         level: "2",
-        obsolete: "no"
+        obsolete: false
     });
 	
 	const filter = {"email": req.body.email};
-	const update = {"status": "2"};
+	const update = {"status": "3"};
 	Config.findOneAndUpdate(filter, update, { new: true })
 	.then(data => {
 		user.save()
@@ -108,6 +96,10 @@ function addAdminUserInfo(clientId, req, res) {
             res.status(200).send({
                 message: "Admin signed up successfully!"
             });
+            let outdict = {}
+            outdict["cname"] = req.body.cname
+            outdict["email"] = req.body.email
+            updateInviteLog(outdict)
         })
 		.catch(err => {
             res.status(500).send({
@@ -162,7 +154,11 @@ function addUserInfo(clientId, req, res) {
             
             user.save()
             .then(data => {
-                     res.status(200).send("User signed up successfully");
+                res.status(200).send("User signed up successfully");
+                let outdict = {}
+                outdict["cname"] = req.body.cname
+                outdict["email"] = req.body.email
+                updateInviteLog(outdict)
             })
             .catch(err => {
                 res.status(500).send({
@@ -245,55 +241,6 @@ function verifyOtp(clientId, req, res) {
 	});
 }
 
-// Get client id of the client
-function getClientId(req, res) {
-	var cname = req.body.cname;
-	
-	Clients.find({"cname": cname})
-	.then(data => {
-		if(data.length == 1) {
-			return data[0].cid;
-		}
-		else {
-			res.status(400).send({
-			message: "Invalid client name"
-		});
-		}
-	})
-	.catch(err => {
-		res.status(400).send({
-			message: "Some error occured when accessing DB"
-		});
-	});
-}
-
-// Verify admin user mail and status
-function checkAdminConfig(req, res) {
-	Config.findOne()
-	.then(data => {
-		if(data) {
-			if(data.status == "0")
-            {
-                return res.status(400).send({message: "Admin email not configured"})
-            }
-			else if(data.status == "1" && data.email == req.body.email) {
-				return true;
-			}
-		    else if(data.status == "2") {
-				return res.status(400).send({message: "Admin email already configured"})
-			}
-			else {
-				return res.status(400).send({message: "Not admin user"})
-			}
-		}
-		else {
-			res.status(400).send({message: "Admin config not done"});
-		}
-	})
-	.catch(err => {
-		res.status(500).send({message: "Some error occured when accessing DB"});
-	});
-}
 
 // Token
 function sendToken(req,res,level)
@@ -343,14 +290,13 @@ exports.updtaeorg = (req, res) => {
     .then(function(data) {
         if(data)
         {
-            if(data.status == "2")
+            if(data.status == "3")  // earlier it was 2
             {
                 res.status(200).send({message: "Admin account already created"})
             }
             else
             {
-                var update = {"email": req.body.aemail, "org": req.body.aorg}
-                //Config.findOneAndUpdate(update, {useFindAndModify: false, new: true})
+                var update = {"email": req.body.aemail, "org": req.body.aorg, "status": "2"}
                 Config.findOneAndUpdate(update)
                 .then(function(data){
                     if(data)
@@ -377,7 +323,7 @@ exports.updtaeorg = (req, res) => {
             cdict = {}
             cdict["email"] = req.body.aemail
             cdict["org"] = req.body.aorg
-            cdict["status"] = "1"
+            cdict["status"] = "2"
             const config = new Config(cdict);
             config.save()
             .then(data => {
@@ -396,44 +342,71 @@ exports.updtaeorg = (req, res) => {
     });  
 }
 
-// To get sign-up mode
+
 exports.signup = (req, res) => {
-    Config.findOne()
-    .then(function(data) {
-        if(data)
-        {
-            if(data.status == "0")
-            {
-                res.status(200).send({message: "Admin email not configured"})
-            }
-            else
-            if(data.status == "1")
-            {
-                res.status(200).send({message: "Welcome Admin"}) 
-            }
-            else
-            if(data.status == "2")
-            {
-                res.status(200).send({message: "Welcome User"}) 
-            }
-            else
-            {
-                res.status(200).send({message: "Database not configured"}) 
-            }
-            
-        }
-        else
-        {
-            res.status(200).send({message: "Database not configured"}) 
-        }
-
-    }).catch(err => {
-        res.status(500).send({
-            message: err.message || "Error occurred while reading the config."
+    if(!req.body.cname || !req.body.uname || !req.body.pwd || !req.body.email) {
+        return res.status(400).send({
+            message: "mandatory field missing"
         });
-    });  
+    }
 
+    console.log("Entering into Signup ...")
+	
+	// email validation
+	const [resb, rest] = validfn.emailvalidation(req.body.email)
+
+    if(!Boolean(resb))
+    {
+        return res.status(400).send({message: "Email " + rest}); 
+    }
+
+
+    Invites.find({$and:[{"cname": req.body.cname},{"email": req.body.email}, {"isUsed": false}]})
+    .then(data => {
+        if(data.length == 0){
+            // Forbidden for whome invitation not sent
+            return res.status(403).send({message: "Couldn't find valid signup invitation for your request."})
+        }
+        else{
+            console.log("Is Admin Status: ", data)
+            console.log(typeof(data[0].cname))
+            console.log(typeof(data[0].isAdmin))
+            if(data[0].isAdmin == true){
+                // Admin Signup request
+                console.log("This is Admin Signup request")
+                addAdminUserInfo("0000", req, res);
+            }
+            else{
+                // General User Signup request
+                console.log("This is User Signup request")
+                Clients.find({"cname": req.body.cname})
+	            .then(data => {
+		            if(data.length == 1) {
+			            var clientId = data[0].cid;
+				        addUserInfo(clientId, req, res);
+                    }
+                    else {
+                        res.status(400).send({
+                            message: "Invalid client name"
+                        });
+                    }
+                })
+                .catch(err => {
+                    res.status(400).send({
+                        message: "Error occured while accessing Client record"
+                    });
+                });
+            }
+        }
+    })
+    .catch(err => {
+        res.status(500).send({
+            message: "Error occurred while accessing Invite Log"
+        });
+    })
 }
+
+
 
 // To send OTP through mail
 exports.sendOtp = async(req, res) => {
@@ -467,8 +440,8 @@ exports.sendOtp = async(req, res) => {
         tvalid: currentDate
     });
 	
-	await sendEmail(otpNum, req, res);
-	
+	await otpmail.sendOTPmail(otpNum, req, res);
+    
 	emotp.save()
     .then(data => {
         res.status(200).send({
@@ -481,106 +454,6 @@ exports.sendOtp = async(req, res) => {
     });
 }
 
-// Admin sign-up
-exports.asignup = async(req, res) => {
-	if(!req.body.cname || !req.body.uname || !req.body.pwd || !req.body.email || !req.body.otpnum) {
-        return res.status(400).send({
-            message: "mandatory field missing"
-        });
-    }
-	
-	// email validation
-	var [resb, rest] = validfn.emailvalidation(req.body.email)
-
-    if(!Boolean(resb))
-    {
-        return res.status(400).send({message: "Email " + rest}); 
-    }
-	
-    Config.findOne()
-	.then(data => {
-		if(data) {
-			if(data.status == "0")
-            {
-                return res.status(400).send({message: "Admin email not configured"})
-            }
-			else 
-            if(data.status == "1") 
-            {
-				if( data.email == req.body.email && data.org == req.body.cname)
-                {
-                    verifyOtp("0000", req, res);
-                }
-                else
-                {
-                    return res.status(400).send({message: "Admin data not match with the record"})
-                }
-            }
-		    else if(data.status == "2") {
-				return res.status(400).send({message: "Admin email already configured"})
-			}
-			else {
-				return res.status(400).send({message: "Not an admin user"})
-			}
-		}
-		else {
-			res.status(400).send({message: "Admin config not done"});
-		}
-	})
-	.catch(err => {
-		res.status(500).send({message: "Error occured while accessing DB"});
-	});
-	
-}
-
-// User sign-up
-exports.usignup = (req, res) => {
-	if(!req.body.cname || !req.body.uname || !req.body.pwd || !req.body.email || !req.body.otpnum) {
-        return res.status(400).send({
-            message: "mandatory field missing"
-        });
-    }
-	
-	// email validation
-	const [resb, rest] = validfn.emailvalidation(req.body.email)
-
-    if(!Boolean(resb))
-    {
-        return res.status(400).send({message: "Email " + rest}); 
-    }
-	
-	// email verify in user table
-	//Users.find({ $or: [{"uname": req.body.uname}, {"email": req.body.email}]})
-	Users.find({$and:[{$or: [{"uname": req.body.uname}, {"email": req.body.email}]},{obsolete: {$eq: false}}]})
-	.then(data => {
-		if(data.length > 0) {
-			res.status(400).send({message: "User already exists"});
-		}
-		else {
-			Clients.find({"cname": req.body.cname})
-	        .then(data => {
-		        if(data.length == 1) {
-			        var clientId = data[0].cid;
-				    verifyOtp(clientId, req, res);
-		        }
-		        else {
-			        res.status(400).send({
-			                message: "Invalid client name"
-		                });
-		        }
-	        })
-	        .catch(err => {
-		            res.status(400).send({
-			            message: "Error occured while accessing DB"
-		            });
-	        });
-		}
-	})
-	.catch(err => {
-		res.status(500).send({message: "Error occured while accessing DB"});
-	});
-	
-}
 
 // List user
 exports.listuser = (req, res) => {
@@ -786,15 +659,14 @@ exports.fpSendOtp = async(req, res) => {
 			username = data[0].uname;
 			
 			try{
-				sendEmail(sOtp, req, res);
-			}
+				otpmail.sendOTPmail(sOtp, req, res);
+            }
 			catch(err){
 				return res.status(500).send({
                     message: err.message || "OTP sending failed!"
                 });
 			}
-			
-			
+						
 			const emotp = new emotps({
                 uname: username,
                 email: req.body.email,
@@ -825,6 +697,162 @@ exports.fpSendOtp = async(req, res) => {
 	.catch(err => {
 		res.status(500).send({
             message: err.message || "Error occurred while accessing DB."
+        });
+	});
+}
+
+
+// To send invite to Admin signup
+
+exports.sendAinvite = async(req, res) => {
+    Config.findOne()
+    .then(function(data) {
+        if(data){
+            if(data.status == "2"){
+                let htmld = htmlbody.constructHtml(data.org, data.email)
+                emailer.sendEmail(data.email, htmld)
+                .then(function(edata){
+                    Invites.find({$and:[{"cname": data.org},{"email": data.email}]})
+                    .then(function(invdata){
+                        if(invdata.length == 0){
+                            console.log("Before Log Invite: ", data.org, data.email)
+                            const invite = new Invites({
+                                cname: data.org,
+                                email: data.email,
+                                isAdmin: true,
+                                isUsed: false
+                            });
+                            invite.save()
+                            .then(data => {
+                                console.log("Inv Logged: ", data)
+                                res.status(200).send({
+                                    message: "SignUp link sent successfully"
+                                });
+                            })
+                            .catch(err => {
+                                res.status(500).send({
+                                    message: "Invite Log Failed!, try again"
+                                });
+                            })
+                        }
+                        else{
+                            console.log(invdata)
+                            res.status(200).send({
+                                message: "SignUp link sent successfully"
+                            });
+                        }
+                    })
+                    .catch(err=>{
+                        console.log("Error in Accessing Invite Rec: ", err)
+                        res.status(500).send({message: "Issues in Accessing Invite record"})
+                    })
+                })
+                .catch(err=>{
+                    // console.log("Error in Email Sending: ", err)
+                    res.status(500).send({message: "Issues in sending of Email"})
+                })
+            }
+            else{
+                if(data.status == "1"){
+                    res.status(200).send({message: "Admin Email not configured!"})
+                }
+                else
+                if(data.status == "3"){
+                    res.status(200).send({message: "Admin account already created"})
+                }
+            }
+        }
+    })
+    .catch(err => {
+        res.status(500).send({
+            message: err.message || "Error occurred while reading the config."
+        });
+    });
+}
+
+// Send User Invite through mail
+exports.sendInvite = async(req, res) => {
+	if(!req.body.cname || !req.body.email) {
+        return res.status(400).send({
+            message: "Client name and Email ID are required"
+        });
+    }
+
+    // email validation
+	var [resb, rest] = validfn.emailvalidation(req.body.email)
+
+    if(!Boolean(resb))
+    {
+        return res.status(400).send({message: "Email " + rest}); 
+    }
+
+    console.log(req.body.cname, req.body.email)
+
+    var filter = {"cname": {$regex: new RegExp(req.body.cname, "ig")}}
+    Clients.findOne(filter)
+    .then(function(data) {
+        if(data)
+        {
+            Invites.find({$and:[{"cname": req.body.cname},{"email": req.body.email}]})
+            .then(function(data){
+                if(data.length == 0){
+                    let htmld = htmlbody.constructHtml(req.body.cname, req.body.email)
+                    emailer.sendEmail(req.body.email, htmld)
+                    .then(data => {
+                         const invite = new Invites({
+                            cname: req.body.cname,
+                            email: req.body.email,
+                            isAdmin: false,
+                            isUsed: false
+                        });
+                        invite.save()
+                        .then(data => {
+                            res.status(200).send({
+                                message: "SignUp link sent successfully"
+                            });
+                        })
+                        .catch(err => {
+                            console.log(err)
+                            res.status(500).send({
+                                message: "Invite Log Failed!"
+                            });
+                        })
+                    })
+                    .catch(err => {
+                        console.log("Error in Email Sending: ", err)
+                        res.status(500).send({message: "Issues in sending of Email"})
+                    });
+                }
+                else{
+                    console.log("Invitation Data: ", data)
+                    let htmld = htmlbody.constructHtml(req.body.cname, req.body.email)
+                    emailer.sendEmail(req.body.email, htmld)
+                    .then(data => {
+                        res.status(200).send({
+                            message: "SignUp link sent successfully"
+                        });
+                    })
+                    .catch(err => {
+                        console.log("Error in Email Sending: ", err)
+                        res.status(500).send({message: "Issues in sending of Email"})
+                    })
+                }
+            })
+            .catch(err => {
+                console.log(err)
+                res.status(500).send({
+                    message: "Error occurred while accessing Client record"
+                });
+            })
+       }
+        else{
+            return res.status(400).send({message: "Client doesn't exists!"})
+        }
+    })
+    .catch(err => {
+        console.log(err)
+		res.status(500).send({
+            message: "Error occurred while accessing Client record"
         });
 	});
 }

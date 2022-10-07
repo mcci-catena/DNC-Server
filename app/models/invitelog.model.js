@@ -1,9 +1,9 @@
 /*############################################################################
 # 
-# Module: constants.js
+# Module: emotp.model.js
 #
 # Description:
-#     Constants definition
+#     DB Schema for OTP handling Collection
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,13 +18,19 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#     V1.3.0 Thu Oct 06 2022 11:24:35 seenivasan
 #       Module created
 ############################################################################*/
 
-module.exports = Object.freeze({
-    APP_NAME: 'Generic DNC API Server',
-    APP_VERSION: '1.3.0',
-	KEY_SECRET: 'mccigdnc2021',
-    APP_PORT: 8891
+const mongoose = require('mongoose');
+
+const NoteSchema = mongoose.Schema({
+    cname: String,
+    email: String,
+    isAdmin: Boolean, 
+    isUsed: Boolean
+}, {
+    timestamps: true
 });
+
+module.exports = mongoose.model('invitelogs', NoteSchema);

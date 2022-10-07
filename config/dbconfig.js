@@ -18,23 +18,24 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#     V1.3.0 Fri Oct 22 2021 11:24:35 seenivasan
 #       Module created
 ############################################################################*/
 
 const mongoose = require('mongoose');
 mongoose.set('useCreateIndex', true);
 
+const dbconst = require('./envdata')
+
 var MongoClient = require('mongodb').MongoClient
 const Config = require('../app/models/config.model.js')
 var errLog = require('../app/misc/errlogs.js')
 
-const DB_DNC_USER = process.env.MONGO_DNC_USERNAME;
-const DB_DNC_PWD = encodeURIComponent(process.env.MONGO_DNC_PASSWD);
-const DB_DNC_NAME = process.env.MONGO_DNC_DBNAME;
+const {DB_ROOT_USER, DB_ROOT_PWD} = {... dbconst.envobj}
+const {DB_DNC_NAME, DB_DNC_USER, DB_DNC_PWD} = {... dbconst.envobj}
 
-const DB_ROOT_USER = process.env.MONGO_INITDB_ROOT_USERNAME;
-const DB_ROOT_PWD = encodeURIComponent(process.env.MONGO_INITDB_ROOT_PASSWORD);
+const DB_ROOT_URL = `mongodb://${DB_ROOT_USER}:${DB_ROOT_PWD}@mongodb:27017`;
+const DB_DNC_URL = `mongodb://mongodb:27017/${DB_DNC_NAME}`;
 
 mongoose.Promise = global.Promise;
 
@@ -45,9 +46,7 @@ mongoose.Promise = global.Promise;
 // If the user is available check the config collection status
 
 exports.dbInit = () => {
-    const DB_URL = `mongodb://${DB_ROOT_USER}:${DB_ROOT_PWD}@mongodb:27017`;
-    
-	MongoClient.connect(DB_URL, {useUnifiedTopology: true,
+    MongoClient.connect(DB_ROOT_URL, {useUnifiedTopology: true,
         useNewUrlParser: true}, function(err, client) {
         
             if(err) {
@@ -93,9 +92,7 @@ exports.dbInit = () => {
 // if fail - Throw an Error and update the status in global variable
 
 function addNewUser() {
-	const DB_URL = `mongodb://${DB_ROOT_USER}:${DB_ROOT_PWD}@mongodb:27017`;
-    
-	MongoClient.connect(DB_URL, {useUnifiedTopology: true,
+	MongoClient.connect(DB_ROOT_URL, {useUnifiedTopology: true,
         useNewUrlParser: true}, function(err, client) {
 
         if(err){
@@ -125,9 +122,7 @@ function addNewUser() {
 
 function openDNCDB() {
 
-	const DB_URL = `mongodb://mongodb:27017/${DB_DNC_NAME}`;
-    
-    mongoose.connect(DB_URL, { user: DB_DNC_USER, pass: DB_DNC_PWD, 
+	mongoose.connect(DB_DNC_URL, { user: DB_DNC_USER, pass: DB_DNC_PWD, 
         useUnifiedTopology: true,
         useNewUrlParser: true
     })

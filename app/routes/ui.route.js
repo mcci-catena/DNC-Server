@@ -27,17 +27,11 @@ const tokenfn = require('../misc/auth.js');
 
 module.exports = (app) => {
     // General signup request from UI reach here
-    app.get('/signup', uictrl.signup);
+    app.post('/signup', uictrl.signup);
     
     // Admin Email configuration
     app.post('/saeorg', uictrl.updtaeorg);
     
-    // Admin signup
-    app.post('/asignup', uictrl.asignup);
-    
-    // General user signup
-    app.post('/usignup', uictrl.usignup);
-
     // Send OTP through Email
     app.post('/send-otp', uictrl.sendOtp);
 	
@@ -59,9 +53,10 @@ module.exports = (app) => {
 	// Login 
 	app.post('/login', uictrl.uiLogin);
 
-    // Authendicate User input
-    // app.post('/chkmoa', uictrl.verifyAuth);
+    // Send User signup invitation 
+	app.post('/invite', uictrl.sendInvite);
 
-    // Test
-    // app.post('/test-api', uictrl.testApi)
+    // Send Admin signup invitation 
+    app.post('/ainvite', uictrl.sendAinvite);
+
 }
