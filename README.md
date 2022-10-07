@@ -3,6 +3,10 @@ Generic DNC is a logical data Server, designed to provide location based data me
 
 ## Release History
 
+- v1.3.0 has the following changes:
+  - Removal of OTP option for new User Signup
+  - Adding of sending invitation link for new User Signup through Admin account
+
 - v1.2.0 has the following changes:
   - Update Login response
   - New endpoint for getting field tags of a client
