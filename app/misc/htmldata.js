@@ -34,11 +34,13 @@ exports.constructHtml = (cname, email) => {
     let cemail = `${email}`
      
     let hmsg = (
-        '<h2>DNC User SignUp</h2>' +
-        '<h3>Please enter the below credentials while Signup</h3>'+
+        '<h2>DNC User Sign Up</h2>' +
+        '<h3>Please enter the below credentials while Sign Up</h3>'+
         '<p><b>Client Name: </b>'+client+'</p>'+
+        '<p><b>Username: </b>Provide a desired Username</p>'+
+        '<p><b>Password: </b>Provide a desired Password</p>'+
         '<p><b>Email ID: </b>'+cemail+'</p>'+
-        '<p style="line-height:20px">Please click on the below link to reach <b>DNC UI Home Page</b> and then click on <b>Signup</b></p>'+
+        '<p style="line-height:20px">Please click on the below link to reach <b>DNC UI Home Page</b> and then click on <b>Sign up</b></p>'+
         '<a href='+dynurl+'>DNC UI Home Page</a>'
     )
     return hmsg
