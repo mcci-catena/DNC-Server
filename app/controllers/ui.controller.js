@@ -880,7 +880,7 @@ exports.updtRole = async(req, res) => {
                 });
             }
             const filter = {uname: req.body.uname}
-            const update = {level: "2"}
+            const update = {level: req.body.level}
             Users.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
             .then(data => {
                 if(!data) {
