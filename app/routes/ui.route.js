@@ -59,4 +59,7 @@ module.exports = (app) => {
     // Send Admin signup invitation 
     app.post('/ainvite', uictrl.sendAinvite);
 
+	// Change Role
+	app.post('/chrole', tokenfn.authenticateJWT, uictrl.updtRole);
+
 }

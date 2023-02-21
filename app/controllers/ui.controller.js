@@ -856,3 +856,59 @@ exports.sendInvite = async(req, res) => {
         });
 	});
 }
+
+
+// Change User Role
+exports.updtRole = async(req, res) => {
+    if(req.body.uname == req.user.user){
+        return res.status(400).send({
+            message: "Request for self account not allowed!"
+        });
+    }
+    Users.findOne({"uname": req.body.uname})
+    .then(function(data){
+        if(data == null){
+            return res.status(400).send({
+                message: "User "+req.body.uname+" not found in the record!"
+            });
+        }
+        Users.findOne({"uname": req.user.user})
+        .then(function(data) {
+            if(data.level != "2"){
+                return res.status(400).send({
+                    message: "Only Admin can update the role of other users"
+                });
+            }
+            const filter = {uname: req.body.uname}
+            const update = {level: "2"}
+            Users.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
+            .then(data => {
+                if(!data) {
+                    return res.status(400).send({
+                        message: "User " +
+                        req.body.uname+" is not found in the record"
+                    });
+                }
+                else{
+                    res.status(200).send({message: "User "+ req.body.uname +" role updated!"});	
+                }
+            }).catch(err => {
+                res.status(500).send({
+                    message: err.message || "Error occurred while accessing user record."
+                });
+            });
+        })
+        .catch(err => {
+            console.log(err)
+            res.status(500).send({
+                message: "Couldn't access the user record"
+            });
+        });
+    })
+    .catch(err => {
+        console.log(err)
+		res.status(500).send({
+            message: "Couldn't fetch the user record"
+        });
+	});
+}
