@@ -60,6 +60,6 @@ module.exports = (app) => {
     app.post('/ainvite', uictrl.sendAinvite);
 
 	// Change Role
-	app.post('/chrole', tokenfn.authenticateJWT, uictrl.updtRole);
+	app.put('/chrole', tokenfn.authenticateJWT, uictrl.updtRole);
 
 }
