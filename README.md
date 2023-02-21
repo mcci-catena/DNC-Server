@@ -3,6 +3,9 @@ Generic DNC is a logical data Server, designed to provide location based data me
 
 ## Release History
 
+- v1.3.2 has the following changes:
+  - Adding of Endpoint for changing user role
+
 - v1.3.1 has the following changes:
   - Adding of additional information in invitation Email content
 
