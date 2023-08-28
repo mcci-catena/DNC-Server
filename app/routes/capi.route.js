@@ -1,6 +1,6 @@
 /*############################################################################
 # 
-# Module: device.route.js
+# Module: capi.route.js
 #
 # Description:
 #     Route for Manage Organization
@@ -22,20 +22,13 @@
 #       Module created
 ############################################################################*/
 
-const devctrl = require('../controllers/device.controller')
+const apictrl = require('../controllers/capi.controller')
+const dnctrl = require('../controllers/dnlink.controller')
 const tokenfn = require('../config/auth')
 
 
 module.exports = (app) => {
-
-    app.post('/device/:sname', tokenfn.authenticateJWT, devctrl.addnewdev);
-
-    app.get('/device', tokenfn.authenticateJWT, devctrl.getspotdevices);
-
-    // Get ready to assign devices
-    app.get('/rtadev/:orgname', tokenfn.authenticateJWT, devctrl.getrtadevices);
-
-    // Remove Device from the Spot
-    app.put('/remdev', tokenfn.authenticateJWT, devctrl.removedevice);
-
+    app.get('/apic', tokenfn.authenticateJWT, apictrl.listapi);
+    app.post('/apic', tokenfn.authenticateJWT, apictrl.updateapi);
+    app.post('/sdnlink', tokenfn.authenticateJWT, dnctrl.dnlinkquery)
 }

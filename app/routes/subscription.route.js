@@ -1,6 +1,6 @@
 /*############################################################################
 # 
-# Module: config.model.js
+# Module: subscription.route.js
 #
 # Description:
 #     Route for Manage User API
@@ -21,14 +21,16 @@
 #     V2.0.0 Fri Feb 24 2023 14:56:21 seenivasan
 #       Module created
 ############################################################################*/
-const mongoose = require('mongoose');
 
-const ConfigSchema = mongoose.Schema({
-    email: String,
-    org: String,
-    status: String
-}, {
-    timestamps: true
-});
+const subsctrl = require('../controllers/subscription.controller')
+const tokenfn = require('../config/auth')
 
-module.exports = mongoose.model('Config', ConfigSchema);
+module.exports = (app) => {
+    app.get('/subs', tokenfn.authenticateJWT, subsctrl.listSubsAll);
+    app.post('/subs', tokenfn.authenticateJWT, subsctrl.addSubs);
+    app.put('/subs', tokenfn.authenticateJWT, subsctrl.updtSubs);
+    app.delete('/subs', tokenfn.authenticateJWT, subsctrl.deleteSubs);
+
+    // app.get('/stock/:orgid', tokenfn.authenticateJWT, stockctrl.listStockOrg);
+
+}

@@ -1,9 +1,9 @@
 /*############################################################################
 # 
-# Module: config.model.js
+# Module: ds.model.js
 #
 # Description:
-#     Route for Manage User API
+#     DB Schema for Data Source Collection
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,17 +18,23 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V2.0.0 Fri Feb 24 2023 14:56:21 seenivasan
+#     V2.0.0 Fri April 29 2023 15:01:35 seenivasan
 #       Module created
 ############################################################################*/
+
 const mongoose = require('mongoose');
 
-const ConfigSchema = mongoose.Schema({
-    email: String,
-    org: String,
-    status: String
+const NoteSchema = mongoose.Schema({
+    dsname: String,
+    dsid: String,
+    dburl: String,
+    dbname: String,
+    mmtname: String,
+    uname: String,
+    pwd: String,
+    user: String
 }, {
     timestamps: true
 });
 
-module.exports = mongoose.model('Config', ConfigSchema);
+module.exports = mongoose.model('dsrc', NoteSchema);

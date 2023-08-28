@@ -1,9 +1,9 @@
 /*############################################################################
 # 
-# Module: config.model.js
+# Module: subscription.model.js
 #
 # Description:
-#     Route for Manage User API
+#     DB Schema for User Collection
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,17 +18,19 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V2.0.0 Fri Feb 24 2023 14:56:21 seenivasan
+#     V2.0.0 Wed MArch 29 2023 15:01:35 seenivasan
 #       Module created
 ############################################################################*/
+
 const mongoose = require('mongoose');
 
-const ConfigSchema = mongoose.Schema({
-    email: String,
-    org: String,
-    status: String
+const NoteSchema = mongoose.Schema({
+    orgid: String,
+    splan: String,
+    sdate: Date,
+    edate: Date,
 }, {
     timestamps: true
 });
 
-module.exports = mongoose.model('Config', ConfigSchema);
+module.exports = mongoose.model('Subs', NoteSchema);

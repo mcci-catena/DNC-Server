@@ -1,9 +1,9 @@
 /*############################################################################
 # 
-# Module: config.model.js
+# Module: hw.model.js
 #
 # Description:
-#     Route for Manage User API
+#     Controller for Managing Org module
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,17 +18,25 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V2.0.0 Fri Feb 24 2023 14:56:21 seenivasan
+#     V2.0.0 Mon July 29 2023 11:15:21 seenivasan
 #       Module created
 ############################################################################*/
+
 const mongoose = require('mongoose');
 
-const ConfigSchema = mongoose.Schema({
-    email: String,
-    org: String,
-    status: String
+const NoteSchema = mongoose.Schema({
+    hwsl: String,
+    boardrev: String,
+    fwver: String,
+    tech: String,
+    network: String,
+    region: String,
+    remarks: String,
+    adate: Date,
+    userid: String,
+    
 }, {
     timestamps: true
 });
 
-module.exports = mongoose.model('Config', ConfigSchema);
+module.exports = mongoose.model('hwmr', NoteSchema);

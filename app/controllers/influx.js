@@ -28,7 +28,7 @@ exports.readInflux = (indata) => {
     return new Promise(function(resolve, reject) {
         query = ""+indata.server+"/query?db="+indata.db+"&q="+indata.qry
 
-        console.log("\nFinal Query: ", query)
+        // console.log("\nFinal Query: ", query)
 
         request.get(query,
             {'auth': {'user': indata.user, 'pass': indata.pwd, 'sendImmediately': false } },

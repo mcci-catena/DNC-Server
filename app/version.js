@@ -18,11 +18,11 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#     V1.0.0 Tue Feb 14 2023 11:24:35 seenivasan
 #       Module created
 ############################################################################*/
 
-const appconst = require('./misc/constants.js');
+const appconst = require('./misc/constants');
 
 module.exports = function (app) {
     app.get('/version', function(req, res) {

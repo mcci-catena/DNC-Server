@@ -1,9 +1,9 @@
 /*############################################################################
 # 
-# Module: config.model.js
+# Module: stock.model.js
 #
 # Description:
-#     Route for Manage User API
+#     DB Schema for User Collection
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,17 +18,25 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V2.0.0 Fri Feb 24 2023 14:56:21 seenivasan
+#     V2.0.0 Fri April 29 2023 15:01:35 seenivasan
 #       Module created
 ############################################################################*/
+
 const mongoose = require('mongoose');
 
-const ConfigSchema = mongoose.Schema({
-    email: String,
-    org: String,
-    status: String
+const NoteSchema = mongoose.Schema({
+    hwid: String,
+    boardRev: String,
+    fwver: String,
+    fwupdtdon: Date,
+    technology: String,
+    region: String,
+    action: String,
+    reason: String,
+    date: Date,
+    user: String
 }, {
     timestamps: true
 });
 
-module.exports = mongoose.model('Config', ConfigSchema);
+module.exports = mongoose.model('Hardware', NoteSchema);

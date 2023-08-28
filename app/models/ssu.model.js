@@ -1,9 +1,9 @@
 /*############################################################################
 # 
-# Module: config.model.js
+# Module: ssu.model.js
 #
 # Description:
-#     Route for Manage User API
+#     DB Schema for User Collection
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,17 +18,25 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V2.0.0 Fri Feb 24 2023 14:56:21 seenivasan
+#     V2.0.0 Fri April 29 2023 15:01:35 seenivasan
 #       Module created
 ############################################################################*/
+
 const mongoose = require('mongoose');
 
-const ConfigSchema = mongoose.Schema({
-    email: String,
-    org: String,
-    status: String
+const SsuSchema = mongoose.Schema({
+    batch: String,
+    ssuid: String,
+    ssutype: String,
+    ssuver: String,
+    ssustatus: String,
+    client: String,
+    location: String,
+    adate: Date,
+    remarks: String,
+    userid: String
 }, {
     timestamps: true
 });
 
-module.exports = mongoose.model('Config', ConfigSchema);
+module.exports = mongoose.model('ssumr', SsuSchema);

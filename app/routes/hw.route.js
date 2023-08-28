@@ -1,6 +1,6 @@
 /*############################################################################
 # 
-# Module: config.model.js
+# Module: hw.route.js
 #
 # Description:
 #     Route for Manage User API
@@ -21,14 +21,12 @@
 #     V2.0.0 Fri Feb 24 2023 14:56:21 seenivasan
 #       Module created
 ############################################################################*/
-const mongoose = require('mongoose');
+const hwctrl = require('../controllers/hw.controller')
+const tokenfn = require('../config/auth')
 
-const ConfigSchema = mongoose.Schema({
-    email: String,
-    org: String,
-    status: String
-}, {
-    timestamps: true
-});
+module.exports = (app) => {
+    app.get('/thwmr/:hwsl', tokenfn.authenticateJWT, hwctrl.getTrackHw)
+    app.post('/ahwmr', tokenfn.authenticateJWT, hwctrl.appendhw);
+    app.put('/hwmr', tokenfn.authenticateJWT, hwctrl.updatehw);
 
-module.exports = mongoose.model('Config', ConfigSchema);
+}

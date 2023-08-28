@@ -25,9 +25,9 @@
 
 const nodemailer = require('nodemailer');
 
-const mailconst = require('../../config/envdata')
+const mailconst = require('../config/envdata')
 
-const {FROM_EMAIL_ID} = {... mailconst.envobj}
+const {SENDER_EMAIL_ID} = {... mailconst.envobj}
 
 const transporter = nodemailer.createTransport({
     host: 'postfix',
@@ -40,7 +40,7 @@ exports.sendEmail = (emailId, htmld) => {
     return new Promise(async function(resolve, reject){
 
         var mailOptions = {
-            from: FROM_EMAIL_ID,
+            from: SENDER_EMAIL_ID,
             to: emailId,
             subject: 'DNC Signup Link',
             html: htmld
@@ -52,7 +52,7 @@ exports.sendEmail = (emailId, htmld) => {
                     // console.log(err);
                     reject(err)
                 } else {
-                    console.log('Email sent successfully');
+                    console.log('Email sent successfully: ', SENDER_EMAIL_ID);
                     resolve("Email Sent Success")
                 }
             });
@@ -68,7 +68,7 @@ exports.sendEmail = (emailId, htmld) => {
 exports.sendOTPmail = (otpNum, req, res) => {
     
     var mailOptions = {
-        from: FROM_EMAIL_ID,
+        from: SENDER_EMAIL_ID,
         to: req.body.email,
         subject: 'Test mail from DNC Server',
         text: 'Your OTP from DNC is '+ otpNum

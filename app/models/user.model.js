@@ -18,20 +18,26 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#     V2.0.0 Wed MArch 29 2023 15:01:35 seenivasan
 #       Module created
 ############################################################################*/
 
 const mongoose = require('mongoose');
 
 const NoteSchema = mongoose.Schema({
-    cid: String,
-    uname: String,
+    uid: String,
+    name: String,
+    email: String,
+    firstName: String,
+    lastName: String,
+    role: String,
     psalt: String,
     phash: String,
-    email: String,
-    level: String,
-	obsolete: Boolean
+    status: String,
+    obsolete: Boolean,
+    firstLogin: Date,
+    validtill: Date,
+    lastLogin: {"login": Date, "logout": Date}
 }, {
     timestamps: true
 });

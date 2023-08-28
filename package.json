@@ -1,30 +1,36 @@
 {
-  "name": "backendApi",
+  "name": "dnc-server",
   "version": "1.0.0",
-  "description": "RESTful API designed to make interface between Grafana and influxDB.",
+  "description": "Data Normalization Server",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitlab-x.mcci.com:client/milkweed/mcgraw/dncv2/dnc-server.git"
   },
   "keywords": [
+    "Node",
+    "JS",
+    "and",
     "Express",
-    "MongoDB",
-    "Mongoose"
+    "JS"
   ],
-  "author": "MCCI",
+  "author": "Seenivasan V, MCCI Corp",
   "license": "ISC",
   "dependencies": {
-    "body-parser": "^1.19.0",
+    "body-parser": "^1.20.1",
     "cors": "^2.8.5",
-    "express": "^4.17.1",
-    "jsonwebtoken": "^8.5.1",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "fetch": "^1.1.0",
+    "jsonwebtoken": "^9.0.0",
     "mongodb-core": "^3.2.7",
     "mongoose": "^5.9.15",
-    "node-fetch": "^2.6.1",
-    "nodemailer": "^6.6.3",
-    "path": "^0.12.7",
-    "request": "^2.88.2",
-    "serve-static": "^1.14.1"
+    "node-fetch": "^3.3.1",
+    "nodemailer": "^6.9.1",
+    "request": "^2.88.2"
   }
 }

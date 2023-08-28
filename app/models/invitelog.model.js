@@ -1,6 +1,6 @@
 /*############################################################################
 # 
-# Module: emotp.model.js
+# Module: invitelog.model.js
 #
 # Description:
 #     DB Schema for OTP handling Collection
@@ -24,7 +24,7 @@
 
 const mongoose = require('mongoose');
 
-const NoteSchema = mongoose.Schema({
+const InviteLogSchema = mongoose.Schema({
     cname: String,
     email: String,
     isAdmin: Boolean, 
@@ -33,4 +33,4 @@ const NoteSchema = mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model('invitelogs', NoteSchema);
+module.exports = mongoose.model('invitelogs', InviteLogSchema);

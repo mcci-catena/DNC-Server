@@ -3,7 +3,7 @@
 # Module: device.controller.js
 #
 # Description:
-#     Endpoint implementation for Device Configuration
+#     Controller for Manage Location module
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,737 +18,333 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V1.0.0 Fri Oct 22 2021 11:24:35 seenivasan
+#     V2.0.0 Tue April 24 2023 11:27:21 seenivasan
 #       Module created
 ############################################################################*/
 
-const Clients = require('../models/client.model.js');
-const Devices = require('../models/devreg.model.js');
-const validfn = require('../misc/validators.js');
-const regdev = require('../controllers/devreg.controller.js');
+const stockctrl = require('./stock.controller')
+
+const Stock = require('../models/stock.model')
+const Orgs = require('../models/org.model.js');
+const Dsrc = require('../models/ds.model')
+
 const mongoose = require('mongoose');
 
-
-getDevSchema = (client) => {
-    mschema = {} 
-    mschema["latitude"] = {"type": "String"}
-    mschema["longitude"] = {"type": "String"}
-    mschema["hwid"] = {"type": "String"}        // previously devEUI, in WeRadiate devid
-            
-    var taglist = client.taglist
-    for(i=0; i<taglist.length; i++)
-    {
-        mschema[taglist[i]] = {"type": "String"}
+exports.getschema = (orgid) => {
+    let devsch
+    try {
+        devsch = mongoose.model('devices'+orgid)
+        console.log("Device Schema exists: ", devsch)
+    }catch (error){
+        devsch = mongoose.model('devices'+orgid, getDevSchema())
+        console.log("Spot Schema not exists: ", spotsch)
     }
-            
+    finally{
+        return devsch
+    }
+}
+
+function getschema(orgid){
+    let devsch
+    try {
+        devsch = mongoose.model('devices'+orgid)
+        console.log("Device Schema exists: ", devsch)
+    }catch (error){
+        devsch = mongoose.model('devices'+orgid, getDevSchema())
+        console.log("Spot Schema not exists: ", spotsch)
+    }
+    finally{
+        return devsch
+    }
+}
+
+getDevSchema = () => {
+    let mschema = {} 
+    mschema["hwsl"] = {"type": "String"}
+    mschema["dsid"] = {"type": "String"}
+    mschema["devid"] = {"type": "String"}
+    mschema["devtype"] = {"type": "String"}
+    mschema["sid"] = {"type": "String"}
     mschema["idate"] = {"type": "Date"}
     mschema["rdate"] = {"type": "Date"}
-
+    mschema["remarks"] = {"type": "String"}
+    mschema["user"] = {"type": "String"}
+       
     const devSchema = mongoose.Schema(mschema, {timestamps: true})
     return devSchema
 }
 
-// create a location under a pile 
+// Org specific function - Assign a device(hwsl) to a spot
+// Input - spotName, HwSl
+// From stock need to get devID, devEUI and DataSource ID
+// idate is optional
 
-exports.create = (req, res) => {
-    if(!req.body.cname || !req.body.lat || !req.body.long || 
-        !req.body.id || !req.body.datetime) {
-
+exports.getrtadevices = async (req, res) => {
+    console.log("Get RTA devices: ", req.params.orgname)
+    if(!req.params.orgname) {
         return res.status(400).send({
-            message: "mandatory field missing"
+            message: "Provide required input fields to assign Device"
         });
     }
 
-    var dttmstr = req.body.datetime.split(",")
-    var dtstr = dttmstr[0].trim();
-    var tmstr = dttmstr[1].trim();
-
-    if(!validfn.validatedate(dtstr) || !validfn.validatetime(tmstr))
-    {
-        return res.status(400).send({
-            message: "Invalid date and time!"
-        });
-    }
-
-    var gdate = new Date(req.body.datetime)
-    var cdate = new Date();
-    
-    if(cdate < gdate)
-    {
-        return res.status(200).send({message: 
-                "Add date should not be recent to the"+ 
-                " current date" });
-    }
-
-    var clientname = {"cname" : req.body.cname};
-    Clients.findOne(clientname)
-    .then(function(data) {
-        if(data)
-        {
-            mschema = {} 
-            mschema["latitude"] = {"type": "String"}
-            mschema["longitude"] = {"type": "String"}
-            var taglist = data.taglist
-            for(i=0; i<taglist.length; i++)
-            {
-                mschema[taglist[i]] = {"type": "String"}
-            }
-            mschema["hwid"] = {"type": "String"}        // previously devEUI, in WeRadiate devid
-            mschema["idate"] = {"type": "String"}
-            mschema["rdate"] = {"type": "String"}
-
-            var clientid = data.cid;
-
-            let Cdev
-            try {
-                Cdev = mongoose.model('devices'+clientid)
-
-            }catch (error){
-                const devSchema = mongoose.Schema(mschema, {timestamps: true})
-                Cdev = mongoose.model('devices'+clientid, devSchema)
-            }
-
-            filtdict = {}
-            indict = {}
-            indict["latitude"] = req.body.lat
-            indict["longitude"] = req.body.long
-           
-            for(i=0; i<taglist.length; i++)
-            {
-                indict[taglist[i]] = null
-            }
+    Orgs.findOne({"name": req.params.orgname})
+    .then(data=>{
+        if(data != null){
+            let orgid = data.id
+            let filter = {"orgid": orgid, "odate": null, "status": /^ready$/i}
             
-            var klist = Object.keys(req.body)
-            var vlist = Object.values(req.body)
-
-            tagdict = {}
-            for(i=0; i<klist.length; i++)
-            {
-                tagdict[klist[i]] = vlist[i]
-            }
-            
-            for(i=0; i<taglist.length; i++)
-            {
-                if(klist.includes(taglist[i]))
-                {
-                    indict[taglist[i]] = tagdict[taglist[i]]
-                    filtdict[taglist[i]] = tagdict[taglist[i]]
+            Stock.find(filter).select({"_id": 0, "createdAt": 0, "updatedAt": 0, "__v": 0})
+            .then(data => {
+                if(data) {
+                    console.log("Device found: ", data)
+                    res.status(200).send({message: data});
                 }
-            }
-
-            indict["hwid"] = req.body.id                  // previously devEUI, in WeRadiate devid
-            indict["idate"] = req.body.datetime
-            indict["rdate"] = ''
-
-            //filtdict["devEUI"] = req.body.id
-            filtdict["rdate"] = ''
-
-            devfilt = {}
-            devfilt["hwid"] = req.body.id
-            devfilt["rdate"] = ''
-
-            Cdev.findOne(devfilt)
-            .then(function(data){
-                if(!data)
-                {
-                    Cdev.findOne(filtdict)
-                    .then(function(data){
-                        if(!data)
-                        {
-                            const ndev = new Cdev(indict)
-                            ndev.save()
-                            .then(data => {
-                                res.send(data);
-                            })
-                            .catch(err => { 
-                                res.status(500).send({
-                                    message: err.message || "Error occurred while adding the Device."
-                                });
-                            });
-                        }
-                        else
-                        {
-                            return res.status(400).send({
-                                message: "A device is already assigned to this location, remove then add a device!"
-                            });
-                        }
-                    })
-                    .catch((err) => {
-                        res.status(500).send({
-                            message: err.message || "Error occurred while fetching Device info"
-                        });
-                    }); 
-                }
-                else
-                {
-                    return res.status(400).send({
-                        message: "The Device is already assigned, try with different!"
-                    });
-                }
-            })
-            .catch((err) => {
-                res.status(500).send({
-                    message: err.message || "Error occurred while fetching Device info"
-                });
-            }); 
-        }
-        else
-        {
-            res.status(200).send({
-                message: "Client not exists"
-            });
-        }
-    })
-    .catch((err) => {
-        res.status(500).send({
-            message: err.message || "Error occurred while fetching the client info"
-        });
-    });
-}
-
-// List the all devices assigned for all clients
-exports.adevClient = (req, res) => {
-    if(!req.params.client) {
-        return res.status(400).send({
-            message: "mandatory field missing"
-        });
-    }
-
-    var clientname = {"cname" : req.params.client};
-    Clients.findOne(clientname)
-    .then(function(data) {
-        if(data)
-        {
-            var clientid = data.cid;
-            var taglist = data.taglist
-            
-            let Cdev
-            try {
-                Cdev = mongoose.model('devices'+clientid)
-            }catch (error){
-                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
-            }
-            Cdev.find()
-            .then(function(data){
-                if(data)
-                {
-                    res.status(200).send(data);
-                }
-            })
-            .catch((err) => {
-                res.status(500).send({
-                    message: err.message || "Error occurred while fetching the device info"
-                });
-            });
-        }
-        else
-        {
-            res.status(400).send({
-                message: "Client doesn't exists"
-            });
-        }
-
-    })
-    .catch((err) => {
-        res.status(500).send({
-            message: err.message || "Error occurred while fetching the client info"
-        });
-    });
-}
-
-
-// Edit a device
-exports.medit = (req, res) => {
-    if(!req.params.client || !req.body.hwid || !req.body.newd) {
-
-        return res.status(400).send({
-            message: "mandatory field missing"
-        });
-    }
-
-    var otherd = {}
-    
-    if(req.body.otherd)
-    {
-        otherd = req.body.otherd
-    }
-    otherd["hwid"] = req.body.hwid
-    
-    var clientname = {"cname" : req.params.client};
-
-    Clients.findOne(clientname)
-    .then(async function(data) {
-        if(data)
-        {
-            var clientid = data.cid;
-            
-            let Cdev
-            try {
-                Cdev = mongoose.model('devices'+clientid)
-            }catch (error){
-                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
-            }
-
-            var filter = otherd
-            var update = req.body.newd
-
-            console.log("Filter: ", filter)
-            console.log("Update: ", update)
-
-            Cdev.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
-            .then(function(data) {
-                if(data)
-                {
-                    res.status(200).send(data);
-                }
-                else
-                {
-                    res.status(400).send({
-                        message: "Selected device not found in the record!"
-                    });
-                }  
-            })
-            .catch((err) => {
-                res.status(500).send({
-                    message: err.message || "Error occurred while updating the device in record!"
-                });
-            });
-        }
-        else
-        {
-            res.status(400).send({
-                message: "Client is not found!"
-            });
-        }
-    })
-    .catch((err) => {
-        res.status(500).send({
-            message: err.message || "Error occurred while fetching the client info"
-        });
-    });
-}
-
-
-exports.showRmDevice = (req, res) => {
-    if(!req.params.client) {
-        return res.status(400).send({
-            message: "mandatory field missing"
-        });
-    }
-
-    var clientname = {"cname" : req.params.client};
-    Clients.findOne(clientname)
-    .then(function(data) {
-        if(data)
-        {
-            var clientid = data.cid;
-            var taglist = data.taglist
-            
-            let Cdev
-            try {
-                Cdev = mongoose.model('devices'+clientid)
-            }catch (error){
-                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
-            }
-
-            var filter = {"rdate" : ''};
-
-            Cdev.find(filter)
-            .then(function(data){
-                if(data)
-                {
-                    res.status(200).send(data);
-                }
-            })
-            .catch((err) => {
-                res.status(500).send({
-                    message: err.message || "Error occurred while fetching the device info"
-                });
-            });
-        }
-        else
-        {
-            res.status(400).send({
-                message: "Client doesn't exists"
-            });
-        }
-    })
-    .catch((err) => {
-        res.status(500).send({
-            message: err.message || "Error occurred while fetching the client info"
-        });
-    });
-}
-
-
-exports.removeDevice = (req, res) => {
-    if(!req.params.cname || !req.body.hwid || !req.body.datetime) {
-        return res.status(400).send({
-            message: "mandatory field missing"
-        });
-    }
-
-    var klist = Object.keys(req.body)
-    
-    var filter = {};
-    for(var i=0; i<klist.length; i++)
-    {
-        if(klist[i] != 'datetime')
-        {
-            filter[klist[i]] = req.body[klist[i]]
-        }
-    }
-    filter["rdate"] = ''
-    
-    var dttmstr = req.body.datetime.split(",")
-    var dtstr = dttmstr[0].trim();
-    var tmstr = dttmstr[1].trim();
-
-    if(!validfn.validatedate(dtstr) || !validfn.validatetime(tmstr))
-    {
-        return res.status(400).send({
-            message: "Invalid date and time!"
-        });
-    }
-
-    var gdate = new Date(req.body.datetime)
-    var cdate = new Date();
-    
-    if(cdate < gdate)
-    {
-        return res.status(400).send({message: 
-                "Remove date should not be recent to the"+ 
-                " current date" });
-    }
-
-    var clientname = {"cname" : req.params.cname};
-    Clients.findOne(clientname)
-    .then(function(data) {
-        if(data)
-        {
-            var clientid = data.cid;
-            clientname = data.cname
-            
-            let Cdev
-            try {
-                Cdev = mongoose.model('devices'+clientid)
-            }catch (error){
-                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
-            }
-
-            var update = {"rdate": new Date(req.body.datetime)};
-
-            Cdev.findOne(filter)
-            .then(function(data) {
-                if(data)
-                {
-                    var idate = data.idate;
-                    var rdate = new Date(req.body.datetime)   
-                    if(rdate > idate)
-                    {
-                        Cdev.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
-                        .then(async function(data){
-                            if(data)
-                            {
-                                var devdict = {}
-                                devdict.cid = clientid
-                                devdict.hwid = data.hwid
-                                devdict.idate = data.idate
-                                devdict.rdate = data.rdate
-                                stat = await regdev.removemdevice(devdict)
-                                if(stat)
-                                {
-                                    res.status(200).send(data)
-                                }
-                                else
-                                {
-                                    res.status(201).send({message: "Device removed in Client record but failed to remove in Admin record,"+
-                                                    "contact Admin to solve the issue and add the new device again"});
-                                }
-                            }
-                            else
-                            {
-                                return res.status(400).send({
-                                    message: "Device info not matched!"
-                                });
-                            } 
-                        })
-                        .catch(err => {
-                            res.status(500).send({
-                                message: "Error occurred while updating device info."
-                            });
-                        });
-                    }
-                    else
-                    {
-                        res.status(400).send({message: "Remove date should be"+ 
-                                              " recent to the installation date"});
-                    }
-                }
-                else
-                {
-                    res.status(400).send({
-                        message: "Requested device not found in the record"
-                    });
+                else {
+                    console.log("No devices foundn for the Org.")
+                    res.status(400).send({message: "No devices foundn for the Org."});
                 }
             })
             .catch(err => {
-                res.status(500).send({
-                    message: "Error occurred while finding the device info."
-                });
-            });
-
-        }
-        else
-        {
-            res.status(400).send({
-                message: "Client not exists"
+                console.log("Error while access: ", err)
+                res.status(500).send({message: "Error while accessing Stock info"});
             });
         }
-
+        else{
+            console.log("Org not exist")
+            res.status(500).send({message: "Org does not exist"})
+        }
     })
     .catch((err) => {
+        console.log("Error while access-2: ", err)
         res.status(500).send({
-            message: "Error occurred while fetching the client info"
+            message: err.message || "Error occurred while fetching Device stock info"
         });
     });
 }
 
+// Assign device to a spot
+exports.addnewdev = async (req, res) => {
 
-exports.replaceDevice = (req, res) => {
-    if(!req.params.cname || !req.body.hwid || !req.body.nhwid ||
-        !req.body.datetime) {
+    console.log("Add New Device: ", req.body, req.body.device)
+
+    if(!req.body.orgname || !req.body.device|| !req.params.sname) {
+        console.log("Field required")
         return res.status(400).send({
-            message: "mandatory field missing"
+            message: "Provide required input fields to assign Device"
         });
     }
 
-    var klist = Object.keys(req.body)
-    
-    var filter = {};
-    for(var i=0; i<klist.length; i++)
-    {
-        if(klist[i] != 'datetime' && klist[i] != 'nhwid')
-        {
-            filter[klist[i]] = req.body[klist[i]]
+    Orgs.findOne({"name": req.body.orgname})
+    .then(data=>{
+        if(data != null){
+            let orgid = data.id
+            let devsch = getschema(orgid)
+
+            devsch.findOne({"hwsl": req.body.device.hwsl, "rdate": null})
+            .then(data => {
+                if(data == null){
+                    console.log("Device ready to assign")
+                    insertdevice(req, res, devsch, orgid)
+                }
+                else{
+                    console.log("Device already exists")
+                    res.status(400).send({message: "Device already exists in the record"})
+                }
+            })
+            .catch(err=>{
+                console.log("Error while accessing Device Info - ", err)
+            })
         }
-    }
-    filter["rdate"] = ''
-    
-    var dttmstr = req.body.datetime.split(",")
-    var dtstr = dttmstr[0].trim();
-    var tmstr = dttmstr[1].trim();
+        else{
+            console.log("Org dows not exists")
+            res.status(200).send({message: "Org does not exist"})
+        }
+    })
+    .catch(err=>{
+        console.log("Error while accessing Org Info - ", err)
+    })
+}
 
-    if(!validfn.validatedate(dtstr) || !validfn.validatetime(tmstr))
-    {
-        return res.status(400).send({
-            message: "Invalid date and time!"
-        });
-    }
-
-    var gdate = new Date(req.body.datetime)
-    var cdate = new Date();
-    
-    if(cdate < gdate)
-    {
-        return res.status(400).send({message: 
-                "Remove date should not be recent to the"+ 
-                " current date" });
-    }
-
-    var clientname = {"cname" : req.params.cname};
-    Clients.findOne(clientname)
-    .then(function(data) {
-        if(data)
-        {
-            var clientid = data.cid;
-            clientname = data.cname
-            var tags = data.taglist
-            
-            let Cdev
-            try {
-                Cdev = mongoose.model('devices'+clientid)
-            }catch (error){
-                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
+async function getDsList(){
+    return new Promise(function(resolve, reject) {
+        Dsrc.find().select({"dsname": 1, "dsid": 1, "_id": 0})
+        .then(data => {
+            if(data.length > 0){
+                let dsdict = {}
+                for(let i=0; i<data.length; i++){
+                    dsdict[data[i].dsid] = data[i].dsname
+                }
+                resolve(dsdict)
+            }
+            else {
+                resolve({})
             }
 
-            var update = {"rdate": new Date(req.body.datetime)};
+        })
+        .catch(err => {
+            resolve({})
+        });
+    })
+}
 
-            Cdev.findOne(filter)
-            .then(function(data) {
-                if(data)
-                {
-                    var idate = data.idate
-                    var rdate = new Date(req.body.datetime)
+exports.getspotdevices = async(req, res) => {
+    console.log("Body: ", req.query)
 
-                    if(rdate > idate)
-                    {
-                        var indict = {}
-                        for(var i=0; i<tags.length; i++)
-                        {
-                            indict[tags[i]] = data[tags[i]]
+    if(!req.query.org || !req.query.sid) {
+        console.log("Field required")
+        return res.status(400).send({
+            message: "Provide required input fields to assign Device"
+        });
+    }
+
+    Orgs.findOne({"name": req.query.org})
+    .then(async (data)=>{
+        if(data != null){
+            let orgid = data.id
+
+            let dsdict = await getDsList()
+
+            let devsch = getschema(orgid)
+
+            devsch.find({ "sid": req.query.sid })
+            .then(data => {
+                if(data) {
+                    for(let i=0; i<data.length; i++){
+                        if(data[i].dsid != null){
+                            data[i]["dsid"] = ""+data[i].dsid+","+dsdict[data[i].dsid]
                         }
-                        indict["latitude"] = data.latitude
-                        indict["longitude"] = data.longitude
-                        indict["idate"] = new Date(req.body.datetime)
-                        indict["rdate"] = ''
-                        indict["hwid"] = req.body.nhwid
-                    
-                                            
-                        nfilt = {}
-                        nfilt["hwid"] = req.body.nhwid
-                        nfilt["rdate"] = ''
-
-                        Cdev.findOne(nfilt)
-                        .then(function(data) {
-                            if(!data)
-                            {
-                                Cdev.findOneAndUpdate(filter, update, {useFindAndModify: false, new: true})
-                                .then(async function(data){
-                                    if(data)
-                                    {
-                                        var devdict = {}
-                                        devdict.cid = clientid
-                                        devdict.hwid = data.hwid
-                                        devdict.idate = data.idate
-                                        devdict.rdate = data.rdate
-                                        stat = await regdev.removemdevice(devdict)
-                                        if(stat)
-                                        {
-                                            const ndev = new Cdev(indict)
-                                            ndev.save()
-                                            .then(data => {
-                                                res.send(data);
-                                            })
-                                            .catch(err => { 
-                                                res.status(500).send({
-                                                    message: err.message || "Error occurred while adding the Device."
-                                                });
-                                            });
-                                        }
-                                        else
-                                        {
-                                            res.status(201).send({message: "Device removed in Client record but failed to remove in Admin record,"+
-                                                    "contact Admin to solve the issue and add the new device again"});
-                                        }
-                                    }
-                                    else
-                                    {
-                                        return res.status(400).send({
-                                            message: "Device info not matched!"
-                                        });
-                                    } 
-                                })
-                                .catch(err => {
-                                    res.status(500).send({
-                                        message: "Error occurred while updating device info."
-                                    });
-                                });
-                            }
-                            else
-                            {
-                                res.status(400).send({message: "The replace"+ 
-                                " device is exists in record"});
-                            }
-                        })
-                        .catch(err => {
-                            res.status(500).send({
-                                message: "Error occurred while updating device info."
-                            });
-                        });
                     }
-                    else
-                    {
-                        res.status(400).send({message: "Replace date should be"+ 
-                                " recent to the installation date"});
-                    }  
+                    res.status(200).send(data);
                 }
-                else
-                {
-                    res.status(400).send({
-                        message: "Requested device not found in the record"
-                    });
+                else {
+                    console.log("No devices found under the spot.")
+                    res.status(200).send({message: []});
                 }
             })
-            .catch(err => {
-                res.status(500).send({
-                    message: "Error occurred while fetching the device info."
-                });
-            });
+            .catch(err=>{
+                console.log("Error while accessing Device Info - ", err)
+            })
         }
-        else
-        {
-            res.status(400).send({
-                message: "Client not exists"
-            });
+        else{
+            console.log("Org dows not exists")
+            res.status(200).send({message: "Org does not exist"})
         }
     })
-    .catch((err) => {
+    .catch(err=>{
+        console.log("Error while accessing Org Info - ", err)
+    })
+
+}
+
+function insertdevice(req, res, devsch, orgid){
+    let ndev = req.body.device
+    ndev['rdate'] = null
+    ndev['user'] = req.user.user.user
+
+    const ntdev = new devsch(ndev);
+    ntdev.save()
+    .then(data => {
+        //console.log("Assign Device success: ", data)
+        res.status(200).send({message: data});
+        // once device assigned, then update the Stock record status as Taken
+        stockctrl.updtdevicetaken(orgid, req.body.device.hwsl)
+    }).catch(err => {
+        console.log("Assign Device  failed: ", err)
         res.status(500).send({
-            message: "Error occurred while fetching the client info"
+            message: err.message || "Error occurred while Assigning Device"
         });
     });
 }
 
+exports.removedevice = (req, res) => {
+    console.log("Remove Device: ", req.body)
 
-// Delete a device with the specified site locatione in the request
-
-exports.delete = (req, res) => {
-    if(!req.params.cname || !req.body.hwid) {
-         return res.status(400).send({
-             message: "mandatory field missing"
-         });
+    if(!req.body.sid || !req.body.hwsl || !req.body.rdate){
+        return res.status(400).send({
+            message: "Provide required input fields to remove the device"
+        });
     }
 
-    var klist = Object.keys(req.body)
-    
-    var filter = {};
-    for(var i=0; i<klist.length; i++)
-    {
-        filter[klist[i]] = req.body[klist[i]]
-    }
-    
-    var clientname = {"cname" : req.params.cname};
-    Clients.findOne(clientname)
-    .then(function(data) {
-        if(data)
-        {
-            var clientid = data.cid
-            
-            let Cdev
-            
-            try {
-                Cdev = mongoose.model('devices'+clientid)
-            }catch (error){
-                Cdev = mongoose.model('devices'+clientid, getDevSchema(data))
-            }
+    Orgs.findOne({"name": req.body.orgname})
+    .then(data=>{
+        if(data != null){
+            let orgid = data.id
+            let devsch = getschema(orgid)
 
-            Cdev.deleteMany(filter)
-            .then(function(data) {
-                if(!data)
-                {
-                    return res.status(400).send({
-                        message: "Device not found with the given details"
-                    });
+            let filter = {}
+            filter["hwsl"] = req.body.hwsl
+            filter["sid"] = req.body.sid
+            filter["rdate"] = null  
+
+            let update = {}
+            update["rdate"] = req.body.rdate
+
+            devsch.findOneAndUpdate(filter, update, { new: true })
+            .then(data=>{
+                if(data != null){
+                    console.log("Device Removal Success")
+                    res.status(200).send({message: "Device removal success"})
+                    stockctrl.updtdeviceready(orgid, req.body.hwsl)
                 }
-                res.send({message: "Device "+req.body.hwid+" deleted successfully!"});
+                else{
+                    console.log("Device Removal failed")
+                    return res.status(200).send({message: "Device removal failed"})
+                }
             })
-            .catch((err) => {
-                res.status(500).send({ 
-                    message: err.message || "Error occurred while fetching device details"
-                });
-            });
+            .catch(err=>{
+                console.log("Error while update Device record: ", err)
+                return res.status(500).send({message: "Error while accessing Database"});
+            })
+
         }
-        else
-        {
-            res.status(400).send({
-                message: "Client not exists"
-            });
+        else{
+            console.log("Org dows not exists")
+            res.status(400).send({message: "Org does not exist"})
         }
     })
-    .catch((err) => {
+    .catch(err=>{
+        console.log("Error while accessing Org Info - ", err)
         res.status(500).send({
-            message: err.message || "Error occurred while fetching the client info"
+            message: err.message || "Error occurred while accessing Org Info"
         });
-    });
-};
+    })
+}
+
+exports.getorgdevlocal = async (orgname) => {
+    return new Promise( async function(resolve, reject) {
+        
+        Orgs.findOne({"name": orgname})
+        .then(data=>{
+            if(data != null){
+                let orgid = data.id
+                let devsch = getschema(orgid)
+
+                let filter = {}
+                filter["rdate"] = null  
+
+                devsch.find(filter).select({"_id": 0, "createdAt": 0, "updatedAt": 0, "__v": 0})
+                .then(data=>{
+                    if(data.length > 0){
+                        resolve(data)
+                    }
+                    else{
+                        reject("No devices found")
+                    }
+                })
+                .catch(err=>{
+                    console.log("Error while update Device record: ", err)
+                    reject("Error while accessing database")
+                })
+
+            }
+            else{
+                console.log("Org dows not exists")
+                reject("Org does not exist")
+            }
+        })
+        .catch(err=>{
+            console.log("Error while accessing Org Info - ", err)
+            reject("Error while accessing Org DB")
+        })
+    })
+}

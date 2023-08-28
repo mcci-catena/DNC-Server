@@ -1,6 +1,6 @@
 /*############################################################################
 # 
-# Module: config.model.js
+# Module: custom.model.js
 #
 # Description:
 #     Route for Manage User API
@@ -18,17 +18,16 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V2.0.0 Fri Feb 24 2023 14:56:21 seenivasan
+#     V2.0.0 Wed Aug 16 2023 19:56:21 seenivasan
 #       Module created
 ############################################################################*/
 const mongoose = require('mongoose');
 
-const ConfigSchema = mongoose.Schema({
-    email: String,
-    org: String,
-    status: String
+const CustomSchema = mongoose.Schema({
+    ccode: String,
+    cparams : [String]
 }, {
     timestamps: true
 });
 
-module.exports = mongoose.model('Config', ConfigSchema);
+module.exports = mongoose.model('Custom', CustomSchema);

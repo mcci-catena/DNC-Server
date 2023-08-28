@@ -1,9 +1,9 @@
 /*############################################################################
 # 
-# Module: config.model.js
+# Module: mathutil.js
 #
 # Description:
-#     Route for Manage User API
+#     Controller for Math Util functions
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -18,17 +18,15 @@
 #     Seenivasan V, MCCI Corporation February 2021
 #
 # Revision history:
-#     V2.0.0 Fri Feb 24 2023 14:56:21 seenivasan
+#     V2.0.0 Mon April 17 2023 11:15:21 seenivasan
 #       Module created
 ############################################################################*/
-const mongoose = require('mongoose');
 
-const ConfigSchema = mongoose.Schema({
-    email: String,
-    org: String,
-    status: String
-}, {
-    timestamps: true
-});
+// Utility functions - Generate 4 digit random numbers
 
-module.exports = mongoose.model('Config', ConfigSchema);
+exports.GenerateRandom = () =>
+{
+   var a = Math.floor((Math.random() * 9999) + 999);
+   a = String(a);
+   return a = a.substring(0, 4);
+}

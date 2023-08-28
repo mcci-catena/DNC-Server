@@ -1,6 +1,6 @@
 /*############################################################################
 # 
-# Module: device.route.js
+# Module: ds.route.js
 #
 # Description:
 #     Route for Manage Organization
@@ -22,20 +22,19 @@
 #       Module created
 ############################################################################*/
 
-const devctrl = require('../controllers/device.controller')
+const dsctrl = require('../controllers/ds.controller')
 const tokenfn = require('../config/auth')
 
 
 module.exports = (app) => {
+    app.get('/dsrc', tokenfn.authenticateJWT, dsctrl.listsrc);
+    app.post('/dsrc', tokenfn.authenticateJWT, dsctrl.addnewdsrc);
+    app.post('/getdbl', tokenfn.authenticateJWT, dsctrl.getdblist);
+    app.post('/getmmtl', tokenfn.authenticateJWT, dsctrl.getmmtlist)
+    app.put('/dsrc/:dsname', tokenfn.authenticateJWT, dsctrl.updatedsrc)
 
-    app.post('/device/:sname', tokenfn.authenticateJWT, devctrl.addnewdev);
+    app.post('/dlist', tokenfn.authenticateJWT, dsctrl.getDevList)
 
-    app.get('/device', tokenfn.authenticateJWT, devctrl.getspotdevices);
-
-    // Get ready to assign devices
-    app.get('/rtadev/:orgname', tokenfn.authenticateJWT, devctrl.getrtadevices);
-
-    // Remove Device from the Spot
-    app.put('/remdev', tokenfn.authenticateJWT, devctrl.removedevice);
+    app.delete('/dsrc/:dsname', tokenfn.authenticateJWT, dsctrl.deleteDs);
 
 }

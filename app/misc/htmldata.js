@@ -22,7 +22,7 @@
 #       Module created
 ############################################################################*/
 
-const emailconst = require('../../config/envdata')
+const emailconst = require('../config/envdata')
 
 const {DNC_UI_URL} = {... emailconst.envobj}
 

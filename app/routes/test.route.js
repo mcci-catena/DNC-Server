@@ -1,9 +1,9 @@
 /*############################################################################
 # 
-# Module: device.route.js
+# Module: org.route.js
 #
 # Description:
-#     Route for Manage Organization
+#     Route for Testing
 #
 # Copyright notice:
 #     This file copyright (c) 2021 by
@@ -22,20 +22,22 @@
 #       Module created
 ############################################################################*/
 
-const devctrl = require('../controllers/device.controller')
-const tokenfn = require('../config/auth')
+const testctrl = require('../controllers/test.controller')
+// const tokenfn = require('../config/auth')
 
 
 module.exports = (app) => {
+    // List all gatways
+    app.get('/stock', testctrl.liststock);
+    app.get('/stock/:orgid', testctrl.liststock);
 
-    app.post('/device/:sname', tokenfn.authenticateJWT, devctrl.addnewdev);
+    // Add new Organization
+    app.post('/stock', testctrl.addstock);
 
-    app.get('/device', tokenfn.authenticateJWT, devctrl.getspotdevices);
+    // Edit the Organization
+    // app.put('/stock', orgctrl.updtstock);
 
-    // Get ready to assign devices
-    app.get('/rtadev/:orgname', tokenfn.authenticateJWT, devctrl.getrtadevices);
-
-    // Remove Device from the Spot
-    app.put('/remdev', tokenfn.authenticateJWT, devctrl.removedevice);
+    // Add the new status to the unit
+    // app.post('/rmgw', tokenfn.authenticateJWT, gwctrl.removegw);
 
 }
