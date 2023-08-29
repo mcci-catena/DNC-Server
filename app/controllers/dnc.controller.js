@@ -219,7 +219,7 @@ exports.getFields = (req, res) => {
                 indict["db"] = dbdata.dbname
                 indict["user"] = dbdata.user
                 indict["pwd"] = dbdata.pwd
-                indict["qry"] = "show field keys from "+dbdata.mmtname
+                indict["qry"] = "show field keys from "+"\""+dbdata.mmtname+"\""
 
                 try{
                     influxdata = await readdb.readInflux(indict)

@@ -651,7 +651,7 @@ exports.getDevices = (req, res) => {
             var cid = data.cid;
             var type = req.body.type
 	
-	    var url = influxUrl + "/query?db="+influxDbn+"&q=SHOW Tag values from "+influxMmn+" with key="+req.body.type;
+	    var url = influxUrl + "/query?db="+influxDbn+"&q=SHOW Tag values from "+"\""+influxMmn+"\""+" with key="+req.body.type;
 	    var authPwd = influxUser + ":" + influxPwd;
 	    var b64Pwd = Buffer.from(authPwd).toString('base64');
 
