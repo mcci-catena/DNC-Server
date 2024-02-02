@@ -3,6 +3,9 @@ Generic DNC is a logical data Server, designed to provide location based data me
 
 ## Release History
 
+- v1.3.3 has the following changes:
+  - Special character in Measurement name has been fixed.
+
 - v1.3.2 has the following changes:
   - Adding of Endpoint for changing user role
 
